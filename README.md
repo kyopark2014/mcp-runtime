@@ -14,6 +14,27 @@ python mcp_server_use_aws.py
 python mcp_client.py
 ```
 
+### AgentCore Toolkit
+
+아래와 같이 [AgentCore Toolkit](https://github.com/aws/bedrock-agentcore-starter-toolkit)을 설치합니다. 
+
+```text
+pip install bedrock-agentcore-starter-toolkit
+```
+
+이후 아래와 같이 설치할 수 있습니다.
+
+```text
+# Configure your agent for deployment
+agentcore configure --entrypoint my_agent.py --name my-production-agent
+
+# Check deployment status
+agentcore status
+
+# Invoke your deployed agent
+agentcore invoke '{"prompt": "Hello from Bedrock AgentCore!"}'
+```
+
 ## Reference 
 
 [Hosting MCP Server on Amazon Bedrock AgentCore Runtime](https://github.com/awslabs/amazon-bedrock-agentcore-samples/blob/main/01-tutorials/01-AgentCore-runtime/02-hosting-MCP-server/hosting_mcp_server.ipynb)
