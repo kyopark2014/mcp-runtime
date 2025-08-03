@@ -1,0 +1,13 @@
+{
+    "projectName":"agentcore",
+    "accountId":"262976740991",
+    "region":"us-west-2",
+    "knowledge_base_role":"arn:aws:iam::262976740991:role/role-knowledge-base-for-agentcore-us-west-2",
+    "collectionArn":"arn:aws:aoss:us-west-2:262976740991:collection/nuatskdv71jqz2leks64",
+    "opensearch_url":"https://nuatskdv71jqz2leks64.us-west-2.aoss.amazonaws.com",
+    "s3_bucket":"storage-for-agentcore-262976740991-us-west-2",
+    "s3_arn":"arn:aws:s3:::storage-for-agentcore-262976740991-us-west-2",
+    "sharing_url":"https://d357h6fmb0oyjh.cloudfront.net",
+    "agent_runtime_role":"arn:aws:iam::262976740991:role/agent-runtime-role-for-agentcore-us-west-2",
+    "agentcore_memory_role":"arn:aws:iam::262976740991:role/role-agentcore-memory-for-agentcore-us-west-2"
+ }
