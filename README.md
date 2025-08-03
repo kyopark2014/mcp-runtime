@@ -22,13 +22,27 @@ python mcp_client.py
 pip install bedrock-agentcore-starter-toolkit
 ```
 
-이후 아래와 같이 설치할 수 있습니다.
+이후 아래와 설치를 준비합니다. 아래 명령어로 [Dockerfile](./Dockerfile)과 [.bedrock_agentcore.yaml](./.bedrock_agentcore.yaml)이 생성됩니다. 
 
 ```text
-agentcore configure -e mcp_server_use_aws.py --protocol MCP
+python setup.py
+```
 
+AgentCore의 상태는 아래 명령어로 확인할 수 있습니다.
+
+```text
 agentcore status
+```
 
+생성된 Docker 파일을 배포합니다.
+
+```text
+agentcore launch
+```
+
+이후 아래와 같이 동작을 확인할 수 있습니다.
+
+```text
 # Invoke your deployed agent
 agentcore invoke '{"prompt": "Hello from Bedrock AgentCore!"}'
 ```
