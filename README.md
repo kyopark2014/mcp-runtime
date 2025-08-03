@@ -25,10 +25,8 @@ pip install bedrock-agentcore-starter-toolkit
 이후 아래와 같이 설치할 수 있습니다.
 
 ```text
-# Configure your agent for deployment
-agentcore configure --entrypoint my_agent.py --name my-production-agent
+agentcore configure -e mcp_server_use_aws.py --protocol MCP
 
-# Check deployment status
 agentcore status
 
 # Invoke your deployed agent
