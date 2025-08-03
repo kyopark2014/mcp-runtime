@@ -50,3 +50,5 @@ agentcore invoke '{"prompt": "Hello from Bedrock AgentCore!"}'
 ## Reference 
 
 [Hosting MCP Server on Amazon Bedrock AgentCore Runtime](https://github.com/awslabs/amazon-bedrock-agentcore-samples/blob/main/01-tutorials/01-AgentCore-runtime/02-hosting-MCP-server/hosting_mcp_server.ipynb)
+
+[Bedrock AgentCore Starter Toolkit](https://github.com/aws/bedrock-agentcore-starter-toolkit)
