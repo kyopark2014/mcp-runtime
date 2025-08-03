@@ -54,3 +54,5 @@ agentcore invoke '{"prompt": "Hello from Bedrock AgentCore!"}'
 [Bedrock AgentCore Starter Toolkit](https://github.com/aws/bedrock-agentcore-starter-toolkit)
 
 [LangChain MCP Adapters](https://github.com/langchain-ai/langchain-mcp-adapters)
+
+[Strands Agents](https://github.com/strands-agents/sdk-python)
