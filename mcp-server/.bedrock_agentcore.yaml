@@ -2,7 +2,7 @@ default_agent: use_aws
 agents:
   use_aws:
     name: use_aws
-    entrypoint: /Users/ksdyb/Documents/src/mcp-use-aws/mcp_server_use_aws.py
+    entrypoint: /Users/ksdyb/Documents/src/mcp-use-aws/mcp-server/mcp_server_use_aws.py
     platform: linux/arm64
     container_runtime: docker
     aws:
@@ -19,12 +19,12 @@ agents:
       observability:
         enabled: true
     bedrock_agentcore:
-      agent_id: null
-      agent_arn: null
-      agent_session_id: null
+      agent_id: use_aws-mNoWe4GlnB
+      agent_arn: arn:aws:bedrock-agentcore:us-west-2:262976740991:runtime/use_aws-mNoWe4GlnB
+      agent_session_id: 1b91a407-dced-45ef-b694-cb3fbf346fb3
     codebuild:
-      project_name: null
-      execution_role: null
-      source_bucket: null
+      project_name: bedrock-agentcore-use_aws-builder
+      execution_role: arn:aws:iam::262976740991:role/AmazonBedrockAgentCoreSDKCodeBuild-us-west-2-c06696457b
+      source_bucket: bedrock-agentcore-codebuild-sources-262976740991-us-west-2
     authorizer_configuration: null
     oauth_configuration: null

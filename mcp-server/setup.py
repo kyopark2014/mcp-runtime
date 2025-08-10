@@ -36,7 +36,6 @@ def load_config():
 config = load_config()
 
 bedrock_region = config['region']
-accountId = config['accountId']
 projectName = config['projectName']
 agent_runtime_role = config['agent_runtime_role']
 tool_name = "use_aws"

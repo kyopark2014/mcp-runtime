@@ -3,5 +3,6 @@ bedrock-agentcore-starter-toolkit
 boto3
 mcp
 uv
-aioboto3
 asyncio
+colorama
+
