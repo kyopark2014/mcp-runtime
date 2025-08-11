@@ -1,6 +1,0 @@
-{
-    "projectName":"agentcore",
-    "region":"us-west-2",
-    "agent_runtime_role":"arn:aws:iam::262976740991:role/agent-runtime-role-for-agentcore-us-west-2",
-    "agentcore_memory_role":"arn:aws:iam::262976740991:role/role-agentcore-memory-for-agentcore-us-west-2"
- }
