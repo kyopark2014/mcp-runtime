@@ -1,0 +1,8 @@
+bedrock-agentcore
+bedrock-agentcore-starter-toolkit
+boto3
+mcp
+uv
+asyncio
+colorama
+
