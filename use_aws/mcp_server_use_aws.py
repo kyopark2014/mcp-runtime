@@ -20,7 +20,7 @@ logging.basicConfig(
         logging.StreamHandler(sys.stderr)
     ]
 )
-logger = logging.getLogger("mcp-server-aws-cost")
+logger = logging.getLogger("mcp-server-use-aws")
 
 try:
     mcp = FastMCP(

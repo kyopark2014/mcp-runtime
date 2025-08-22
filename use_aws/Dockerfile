@@ -2,16 +2,11 @@ FROM public.ecr.aws/docker/library/python:3.13-slim
 WORKDIR /app
 
 
-
 COPY requirements.txt requirements.txt
 # Install from requirements file
 RUN pip install -r requirements.txt
 
-
-
-
-RUN pip install aws-opentelemetry-distro>=0.10.0
-
+#RUN pip install aws-opentelemetry-distro>=0.10.0
 
 # Set AWS region environment variable
 
@@ -34,4 +29,5 @@ COPY . .
 
 # Use the full module path
 
-CMD ["opentelemetry-instrument", "python", "-m", "mcp_server_use_aws"]
+# CMD ["opentelemetry-instrument", "python", "-m", "mcp_server_use_aws"]
+CMD ["python", "-m", "mcp_server_use_aws"]

@@ -1,6 +1,16 @@
 {
-    "projectName":"agentcore",
-    "region":"us-west-2",
-    "agent_runtime_role":"arn:aws:iam::262976740991:role/agent-runtime-role-for-agentcore-us-west-2",
-    "agentcore_memory_role":"arn:aws:iam::262976740991:role/role-agentcore-memory-for-agentcore-us-west-2"
- }
+  "projectName": "agentcore",
+  "region": "us-west-2",
+  "agent_runtime_role": "arn:aws:iam::262976740991:role/BedrockAgentCoreMCPRole",
+  "agentcore_memory_role": "arn:aws:iam::262976740991:role/role-agentcore-memory-for-agentcore-us-west-2",
+  "agent_runtime_arn": "arn:aws:bedrock-agentcore:us-west-2:262976740991:runtime/use_aws-mNoWe4GlnB",
+  "cognito": {
+    "identity_pool_id": "us-west-2:68e15bb3-9e7f-4b1f-97d5-86ccd946f612",
+    "identity_pool_name": "mcp-agentcore-identity-pool",
+    "user_pool_id": "us-west-2_NpYU8OBMg",
+    "user_pool_name": "mcp-agentcore-user-pool",
+    "client_id": "41987ttgdipola4vkfabk3cv6s",
+    "client_name": "mcp-agentcore-client",
+    "region": "us-west-2"
+  }
+}
