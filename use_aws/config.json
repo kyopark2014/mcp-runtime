@@ -1,22 +1,22 @@
 {
-    "projectName": "agentcore",
+  "projectName": "agentcore",
+  "region": "us-west-2",
+  "accountId": "262976740991",
+  "agent_runtime_role": "arn:aws:iam::262976740991:role/BedrockAgentCoreMCPRole",
+  "agent_runtime_role_name": "BedrockAgentCoreMCPRole",
+  "agentcore_memory_role": "arn:aws:iam::262976740991:role/role-agentcore-memory-for-agentcore-us-west-2",
+  "agent_runtime_arn": "arn:aws:bedrock-agentcore:us-west-2:262976740991:runtime/agentcore_use_aws-rFBkiW7Cuu",
+  "cognito": {
+    "discovery_url": "https://cognito-idp.us-west-2.amazonaws.com/us-west-2_fgn0eYbzB/.well-known/openid-configuration",
+    "policy_name": "MCPServerAuthPolicy",
+    "identity_pool_id": "us-west-2:90163921-ab57-4991-ac89-4c7a0a00b2c2",
+    "identity_pool_name": "mcp-agentcore-identity-pool",
+    "user_pool_id": "us-west-2_fgn0eYbzB",
+    "user_pool_name": "mcp-agentcore-user-pool",
+    "client_id": "1m0vn9h4jon7b7dh341g4ggop7",
+    "client_name": "mcp-agentcore-client",
     "region": "us-west-2",
-    "accountId": "262976740991",
-    "agent_runtime_role": "arn:aws:iam::262976740991:role/BedrockAgentCoreMCPRole",
-    "agent_runtime_role_name": "BedrockAgentCoreMCPRole",
-    "agentcore_memory_role": "arn:aws:iam::262976740991:role/role-agentcore-memory-for-agentcore-us-west-2",
-    "agent_runtime_arn": "arn:aws:bedrock-agentcore:us-west-2:262976740991:runtime/agentcore_use_aws-5uzsUM4381",
-    "cognito": {
-        "discovery_url": "https://cognito-idp.us-west-2.amazonaws.com/us-west-2_Zq9Qb9nyL/.well-known/openid-configuration",
-        "policy_name": "MCPServerAuthPolicy",
-        "identity_pool_id": "us-west-2:68e15bb3-9e7f-4b1f-97d5-86ccd946f612",
-        "identity_pool_name": "mcp-agentcore-identity-pool",
-        "user_pool_id": "us-west-2_Zq9Qb9nyL",
-        "user_pool_name": "mcp-agentcore-user-pool",
-        "client_id": "6rpjijend9osng4io4qiuv31ad",
-        "client_name": "mcp-agentcore-client",
-        "region": "us-west-2",
-        "test_username": "mcp-test-user@example.com",
-        "test_password": "TestPassword123!"
-    }
+    "test_username": "mcp-test-user@example.com",
+    "test_password": "TestPassword123!"
+  }
 }

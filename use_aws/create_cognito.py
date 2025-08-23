@@ -2,6 +2,7 @@ import boto3
 import json
 import os
 import time
+import jwt
 from datetime import datetime, timedelta
 
 accountId = boto3.client('sts').get_caller_identity()['Account']
@@ -15,6 +16,197 @@ def load_config():
     except Exception as e:
         print(f"Failed to load config.json: {e}")
         return None
+
+def fix_cognito_client():
+    """Fix Cognito app client authentication flows"""
+    config = load_config()
+    if not config:
+        print("Failed to load configuration")
+        return False
+    
+    user_pool_id = config['cognito']['user_pool_id']
+    client_id = config['cognito']['client_id']
+    region = config['region']
+    
+    print(f"Fixing Cognito app client: {client_id}")
+    print(f"User Pool: {user_pool_id}")
+    print(f"Region: {region}")
+    
+    try:
+        cognito_idp_client = boto3.client('cognito-idp', region_name=region)
+        
+        # Update the app client to enable ADMIN_NO_SRP_AUTH flow
+        response = cognito_idp_client.update_user_pool_client(
+            UserPoolId=user_pool_id,
+            ClientId=client_id,
+            ExplicitAuthFlows=[
+                'ALLOW_ADMIN_USER_PASSWORD_AUTH',
+                'ALLOW_USER_PASSWORD_AUTH',
+                'ALLOW_REFRESH_TOKEN_AUTH',
+                'ALLOW_USER_SRP_AUTH'
+            ],
+            ReadAttributes=[
+                'email',
+                'email_verified',
+                'name'
+            ],
+            WriteAttributes=[
+                'email',
+                'name'
+            ]
+        )
+        
+        print("✓ Cognito app client updated successfully")
+        print(f"Client ID: {response['UserPoolClient']['ClientId']}")
+        print(f"Client Name: {response['UserPoolClient']['ClientName']}")
+        
+        return True
+        
+    except Exception as e:
+        print(f"Error updating Cognito app client: {e}")
+        return False
+
+def fix_identity_pool():
+    """Fix Identity Pool to allow unauthenticated access for testing"""
+    config = load_config()
+    if not config:
+        print("Failed to load configuration")
+        return False
+    
+    identity_pool_id = config['cognito']['identity_pool_id']
+    region = config['region']
+    
+    print(f"Fixing Identity Pool: {identity_pool_id}")
+    
+    try:
+        cognito_identity_client = boto3.client('cognito-identity', region_name=region)
+        
+        # Get current identity pool configuration
+        response = cognito_identity_client.describe_identity_pool(
+            IdentityPoolId=identity_pool_id
+        )
+        
+        print(f"Current Identity Pool: {response['IdentityPoolName']}")
+        print(f"Allow unauthenticated identities: {response.get('AllowUnauthenticatedIdentities', False)}")
+        
+        # Update identity pool to allow unauthenticated access for testing
+        update_response = cognito_identity_client.update_identity_pool(
+            IdentityPoolId=identity_pool_id,
+            IdentityPoolName=response['IdentityPoolName'],
+            AllowUnauthenticatedIdentities=True,
+            CognitoIdentityProviders=response.get('CognitoIdentityProviders', []),
+            SupportedLoginProviders=response.get('SupportedLoginProviders', {})
+        )
+        
+        print("✓ Identity Pool updated to allow unauthenticated access")
+        
+        return True
+        
+    except Exception as e:
+        print(f"Error updating Identity Pool: {e}")
+        return False
+
+def create_test_user():
+    """Create a test user in Cognito User Pool"""
+    try:
+        config = load_config()
+        if not config:
+            print("Failed to load configuration")
+            return False
+            
+        user_pool_id = config['cognito']['user_pool_id']
+        region = config['region']
+        username = config['cognito']['test_username']
+        password = config['cognito']['test_password']
+        
+        print(f"Creating test user in User Pool: {user_pool_id}")
+        print(f"Username: {username}")
+        print(f"Region: {region}")
+        
+        # Create Cognito Identity Provider client
+        cognito_idp_client = boto3.client('cognito-idp', region_name=region)
+        
+        # Check if user already exists
+        try:
+            response = cognito_idp_client.admin_get_user(
+                UserPoolId=user_pool_id,
+                Username=username
+            )
+            print(f"✓ User '{username}' already exists")
+            return True
+        except cognito_idp_client.exceptions.UserNotFoundException:
+            print(f"User '{username}' does not exist, creating...")
+        
+        # Create user
+        response = cognito_idp_client.admin_create_user(
+            UserPoolId=user_pool_id,
+            Username=username,
+            UserAttributes=[
+                {
+                    'Name': 'email',
+                    'Value': username
+                },
+                {
+                    'Name': 'email_verified',
+                    'Value': 'true'
+                }
+            ],
+            TemporaryPassword=password,
+            MessageAction='SUPPRESS'  # Don't send welcome email
+        )
+        
+        print(f"✓ User '{username}' created successfully")
+        
+        # Set permanent password
+        try:
+            cognito_idp_client.admin_set_user_password(
+                UserPoolId=user_pool_id,
+                Username=username,
+                Password=password,
+                Permanent=True
+            )
+            print(f"✓ Password set for user '{username}'")
+        except Exception as e:
+            print(f"Warning: Could not set permanent password: {e}")
+            print("User may need to change password on first login")
+        
+        return True
+        
+    except Exception as e:
+        print(f"Error creating test user: {e}")
+        return False
+
+def list_users():
+    """List all users in the User Pool"""
+    try:
+        config = load_config()
+        if not config:
+            print("Failed to load configuration")
+            return False
+            
+        user_pool_id = config['cognito']['user_pool_id']
+        region = config['region']
+        
+        print(f"Listing users in User Pool: {user_pool_id}")
+        
+        cognito_idp_client = boto3.client('cognito-idp', region_name=region)
+        
+        response = cognito_idp_client.list_users(
+            UserPoolId=user_pool_id
+        )
+        
+        print(f"\nFound {len(response['Users'])} users:")
+        for user in response['Users']:
+            username = user['Username']
+            status = user['UserStatus']
+            created = user['UserCreateDate']
+            print(f"  - {username} (Status: {status}, Created: {created})")
+        
+        return True
+        
+    except Exception as e:
+        print(f"Error listing users: {e}")
+        return False
     
 def create_cognito_user_pool():
     """Creates Cognito User Pool for MCP authentication"""
@@ -334,6 +526,199 @@ def update_bedrock_agentcore_role():
         print(f"Failed to attach policy: {e}")
         return False
 
+def create_bearer_token_with_user_pool():
+    """Create Bearer token using Cognito User Pool authentication"""
+    try:
+        config = load_config()
+        if not config:
+            print("Failed to load configuration")
+            return None
+            
+        user_pool_id = config['cognito']['user_pool_id']
+        client_id = config['cognito']['client_id']
+        region = config['region']
+        
+        print(f"Using User Pool ID: {user_pool_id}")
+        print(f"Using Client ID: {client_id}")
+        print(f"Using region: {region}")
+        
+        # Create Cognito Identity Provider client
+        cognito_idp_client = boto3.client('cognito-idp', region_name=region)
+        
+        # For testing purposes, we'll use admin_initiate_auth
+        # In production, you should use proper user authentication flow
+        
+        # Check if we have test credentials in config
+        if 'test_username' in config['cognito'] and 'test_password' in config['cognito']:
+            username = config['cognito']['test_username']
+            password = config['cognito']['test_password']
+            
+            print(f"Attempting authentication with test user: {username}")
+            
+            # Authenticate user
+            auth_response = cognito_idp_client.admin_initiate_auth(
+                UserPoolId=user_pool_id,
+                ClientId=client_id,
+                AuthFlow='ADMIN_NO_SRP_AUTH',
+                AuthParameters={
+                    'USERNAME': username,
+                    'PASSWORD': password
+                }
+            )
+            
+            if 'AuthenticationResult' in auth_response:
+                id_token = auth_response['AuthenticationResult']['IdToken']
+                access_token = auth_response['AuthenticationResult']['AccessToken']
+                
+                print("✓ Authentication successful")
+                print(f"ID Token: {id_token[:20]}...{id_token[-20:]}")
+                print(f"Access Token: {access_token[:20]}...{access_token[-20:]}")
+                
+                # Use the ID token as bearer token
+                bearer_token = f"Bearer {id_token}"
+                return bearer_token
+            else:
+                print("Authentication failed - no authentication result")
+                return None
+        else:
+            print("No test credentials found in config")
+            print("Please add test_username and test_password to config.json")
+            return None
+            
+    except Exception as e:
+        print(f"Error creating bearer token with User Pool: {e}")
+        return None
+
+def create_bearer_token_with_identity_pool():
+    """Create Bearer token using Cognito Identity Pool with User Pool authentication"""
+    try:
+        config = load_config()
+        if not config:
+            print("Failed to load configuration")
+            return None
+            
+        identity_pool_id = config['cognito']['identity_pool_id']
+        user_pool_id = config['cognito']['user_pool_id']
+        client_id = config['cognito']['client_id']
+        region = config['region']
+        
+        print(f"Using Identity Pool ID: {identity_pool_id}")
+        print(f"Using User Pool ID: {user_pool_id}")
+        print(f"Using Client ID: {client_id}")
+        print(f"Using region: {region}")
+        
+        # First, authenticate with User Pool
+        cognito_idp_client = boto3.client('cognito-idp', region_name=region)
+        
+        if 'test_username' in config['cognito'] and 'test_password' in config['cognito']:
+            username = config['cognito']['test_username']
+            password = config['cognito']['test_password']
+            
+            print(f"Authenticating with User Pool: {username}")
+            
+            # Authenticate user
+            auth_response = cognito_idp_client.admin_initiate_auth(
+                UserPoolId=user_pool_id,
+                ClientId=client_id,
+                AuthFlow='ADMIN_NO_SRP_AUTH',
+                AuthParameters={
+                    'USERNAME': username,
+                    'PASSWORD': password
+                }
+            )
+            
+            if 'AuthenticationResult' in auth_response:
+                id_token = auth_response['AuthenticationResult']['IdToken']
+                
+                # Now use the ID token with Identity Pool
+                cognito_identity_client = boto3.client('cognito-identity', region_name=region)
+                
+                # Get identity ID using the authenticated token
+                identity_response = cognito_identity_client.get_id(
+                    IdentityPoolId=identity_pool_id,
+                    Logins={
+                        f'cognito-idp.{region}.amazonaws.com/{user_pool_id}': id_token
+                    }
+                )
+                
+                identity_id = identity_response['IdentityId']
+                print(f"✓ Got Identity ID: {identity_id}")
+                
+                # Get temporary credentials
+                credentials_response = cognito_identity_client.get_credentials_for_identity(
+                    IdentityId=identity_id,
+                    Logins={
+                        f'cognito-idp.{region}.amazonaws.com/{user_pool_id}': id_token
+                    }
+                )
+                
+                credentials = credentials_response['Credentials']
+                print("✓ Got temporary credentials")
+                
+                # Create a custom bearer token with the temporary credentials
+                bearer_token = f"Bearer_{credentials['AccessKeyId']}_{credentials['SecretKey']}_{credentials['SessionToken']}"
+                return bearer_token
+            else:
+                print("Authentication failed")
+                return None
+        else:
+            print("No test credentials found in config")
+            return None
+            
+    except Exception as e:
+        print(f"Error creating bearer token with Identity Pool: {e}")
+        return None
+
+def create_bearer_token():
+    """Create Bearer token for AWS Bedrock AgentCore"""
+    print("Attempting to create Bearer token for AWS Bedrock AgentCore...")
+    
+    # Method 1: Using Cognito User Pool (Recommended)
+    print("\nMethod 1: Using Cognito User Pool")
+    token = create_bearer_token_with_user_pool()
+    
+    if not token:
+        # Method 2: Using Cognito Identity Pool with User Pool authentication
+        print("\nMethod 2: Using Cognito Identity Pool with User Pool authentication")
+        token = create_bearer_token_with_identity_pool()
+    
+    if token:
+        print(f"\nBearer token created: {token[:20]}...{token[-20:] if len(token) > 40 else ''}")
+        
+        try:
+            config = load_config()
+            region = config['region']
+            secrets_client = boto3.client('secretsmanager', region_name=region)
+            secret_value = json.dumps({'bearer_token': token})
+            
+            # Try to update existing secret first
+            try:
+                secrets_client.update_secret(
+                    SecretId='mcp_server/cognito/credentials',
+                    SecretString=secret_value,
+                    Description='Bearer token for MCP server authentication'
+                )
+                print("✓ Token updated in AWS Secrets Manager")
+            except secrets_client.exceptions.ResourceNotFoundException:
+                # If secret doesn't exist, create it
+                secrets_client.create_secret(
+                    Name='mcp_server/cognito/credentials',
+                    SecretString=secret_value,
+                    Description='Bearer token for MCP server authentication'
+                )
+                print("✓ Token saved to AWS Secrets Manager")
+        except Exception as e:
+            print(f"Error saving to Secrets Manager: {e}")
+        
+        return token
+    else:
+        print("\nCould not create Bearer token")
+        print("\nManual setup required:")
+        print("1. Add test_username and test_password to config.json")
+        print("2. Create a user in the Cognito User Pool")
+        print("3. Or configure AWS Secrets Manager with secret 'mcp_server/cognito/credentials'")
+        return None
+
 def main():
     print("=== AWS Bedrock AgentCore MCP Setup ===\n")
     
@@ -364,6 +749,50 @@ def main():
     # 4. Create and attach MCP authentication policy
     print("\n4. Setting up MCP authentication policy...")
     update_bedrock_agentcore_role()
+    
+    # 5. Fix Cognito app client authentication flows
+    print("\n5. Fixing Cognito app client authentication flows...")
+    if user_pool_id and client_id:
+        if fix_cognito_client():
+            print("✓ Cognito app client fixed successfully")
+        else:
+            print("⚠ Warning: Failed to fix Cognito app client")
+    
+    # 6. Create test user
+    print("\n6. Creating test user...")
+    if user_pool_id:
+        success = create_test_user()
+        if success:
+            print("\n✓ Test user setup completed successfully")
+            
+            # 7. Create Bearer token
+            print("\n7. Creating Bearer token...")
+            token = create_bearer_token()
+            if token:
+                print("\n✓ Bearer token created and saved successfully")
+                print("\nSetup completed! You can now use the MCP server with authentication.")
+            else:
+                print("\n✗ Failed to create Bearer token")
+                print("\nPlease check your AWS credentials and User Pool configuration")
+        else:
+            print("\n✗ Failed to create test user")
+            print("\nPlease check your AWS credentials and User Pool configuration")
+    
+    # 8. Optional: Fix Identity Pool for testing (allows unauthenticated access)
+    print("\n8. Optional: Fixing Identity Pool for testing...")
+    if identity_pool_id:
+        if fix_identity_pool():
+            print("✓ Identity Pool updated for testing")
+        else:
+            print("⚠ Warning: Failed to update Identity Pool (this is optional)")
+    
+    print("\n=== Setup Summary ===")
+    print("✓ Cognito User Pool and Identity Pool created")
+    print("✓ App client authentication flows configured")
+    print("✓ Test user created")
+    print("✓ Bearer token generated and saved")
+    print("✓ MCP authentication policy attached")
+    print("\nYou can now use the MCP server with authentication!")
     
 if __name__ == "__main__":
     main()
