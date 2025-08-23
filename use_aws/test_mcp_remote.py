@@ -188,6 +188,8 @@ async def main():
     
     # Prepare the request body for MCP initialization
     request_body = json.dumps({
+        "jsonrpc": "2.0",
+        "id": "1",
         "method": "initialize", 
         "params": {
             "protocolVersion": "2024-11-05", 
@@ -203,7 +205,8 @@ async def main():
     print("Using OAuth (Bearer token only) authentication...")
     headers = {
         "authorization": f"Bearer {bearer_token}",
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "Accept": "application/json, text/event-stream"
     }
     
     print(f"Using headers: {headers}\n")

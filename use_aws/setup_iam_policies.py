@@ -35,36 +35,19 @@ def create_bedrock_agentcore_policy():
     policy_name = agent_runtime_role_name
     policy_description = "Policy for accessing Bedrock AgentCore MCP endpoints"
     
-    # Policy document for Bedrock AgentCore MCP access
+    # Comprehensive policy document for Bedrock AgentCore MCP access
     policy_document = {
         "Version": "2012-10-17",
         "Statement": [
             {
-                "Sid": "BedrockAgentCoreMCPAccess",
+                "Sid": "BedrockAgentAccess",
                 "Effect": "Allow",
                 "Action": [
-                    "bedrock-agentcore:InvokeAgentRuntime",
-                    "bedrock-agentcore:GetWorkloadAccessToken",
-                    "bedrock-agentcore:GetWorkloadAccessTokenForJWT",
-                    "bedrock-agentcore:GetWorkloadAccessTokenForUserId",
-                    "bedrock-agentcore:ListSessions",
-                    "bedrock-agentcore:GetEvent",
-                    "bedrock-agentcore:ListEvents"
+                    "bedrock-agentcore:*"
                 ],
                 "Resource": [
-                    "arn:aws:bedrock-agentcore:us-west-2:*:runtime/*",
-                    "arn:aws:bedrock-agentcore:us-west-2:*:runtime/*/runtime-endpoint/*"
+                    "*"
                 ]
-            },
-            {
-                "Sid": "BedrockAgentCoreReadAccess",
-                "Effect": "Allow",
-                "Action": [
-                    "bedrock-agentcore:ListActors",
-                    "bedrock-agentcore:GetMemoryRecord",
-                    "bedrock-agentcore:ListMemoryRecords"
-                ],
-                "Resource": "*"
             },
             {
                 "Sid": "SecretsManagerAccess",
@@ -81,12 +64,7 @@ def create_bedrock_agentcore_policy():
                 "Sid": "CognitoAccess",
                 "Effect": "Allow",
                 "Action": [
-                    "cognito-idp:GetUser",
-                    "cognito-idp:GetUserPool",
-                    "cognito-idp:ListUserPools",
-                    "cognito-idp:ListUserPoolClients",
-                    "cognito-identity:GetId",
-                    "cognito-identity:GetCredentialsForIdentity"
+                    "cognito-idp:*"
                 ],
                 "Resource": "*"
             },
@@ -100,18 +78,6 @@ def create_bedrock_agentcore_policy():
                     "ecr:DescribeRepositories",
                     "ecr:ListImages",
                     "ecr:DescribeImages"
-                ],
-                "Resource": "*"
-            },
-            {
-                "Sid": "AgentCoreRuntimeAccess",
-                "Effect": "Allow",
-                "Action": [
-                    "bedrock-agentcore:CreateAgentRuntime",
-                    "bedrock-agentcore:DeleteAgentRuntime",
-                    "bedrock-agentcore:GetAgentRuntime",
-                    "bedrock-agentcore:ListAgentRuntimes",
-                    "bedrock-agentcore:UpdateAgentRuntime"
                 ],
                 "Resource": "*"
             },
@@ -140,6 +106,44 @@ def create_bedrock_agentcore_policy():
         try:
             existing_policy = iam_client.get_policy(PolicyArn=f"arn:aws:iam::{accountId}:policy/{policy_name}")
             print(f"Existing policy found: {existing_policy['Policy']['Arn']}")
+            
+            # List all policy versions
+            versions_response = iam_client.list_policy_versions(PolicyArn=existing_policy['Policy']['Arn'])
+            versions = versions_response['Versions']
+            
+            # If we have 5 versions, delete the oldest non-default version
+            if len(versions) >= 5:
+                print(f"Policy has {len(versions)} versions, cleaning up old versions...")
+                
+                # Find non-default versions to delete
+                non_default_versions = [v for v in versions if not v['IsDefaultVersion']]
+                
+                if non_default_versions:
+                    # Delete the oldest non-default version
+                    oldest_version = non_default_versions[0]
+                    iam_client.delete_policy_version(
+                        PolicyArn=existing_policy['Policy']['Arn'],
+                        VersionId=oldest_version['VersionId']
+                    )
+                    print(f"✓ Deleted old policy version: {oldest_version['VersionId']}")
+                else:
+                    # If all versions are default, we need to set a different version as default first
+                    for version in versions[1:]:  # Skip the current default
+                        try:
+                            iam_client.set_default_policy_version(
+                                PolicyArn=existing_policy['Policy']['Arn'],
+                                VersionId=version['VersionId']
+                            )
+                            # Now delete the old default
+                            iam_client.delete_policy_version(
+                                PolicyArn=existing_policy['Policy']['Arn'],
+                                VersionId=versions[0]['VersionId']
+                            )
+                            print(f"✓ Switched default version and deleted old version: {versions[0]['VersionId']}")
+                            break
+                        except Exception as e:
+                            print(f"Failed to switch version {version['VersionId']}: {e}")
+                            continue
             
             # Create policy version
             response = iam_client.create_policy_version(
@@ -312,3 +316,141 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# Alternative Policy Definitions (for reference and testing)
+def get_updated_policy():
+    """Get updated policy with workload identity support"""
+    return {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Sid": "BedrockAgentAccess",
+                "Effect": "Allow",
+                "Action": [
+                    "bedrock-agentcore:*"
+                ],
+                "Resource": "*"
+            },
+            {
+                "Sid": "SecretsManagerAccess",
+                "Effect": "Allow",
+                "Action": [
+                    "secretsmanager:GetSecretValue",
+                    "secretsmanager:DescribeSecret"
+                ],
+                "Resource": [
+                    "arn:aws:secretsmanager:us-west-2:*:secret:mcp_server/cognito/credentials*"
+                ]
+            },
+            {
+                "Sid": "CognitoAccess",
+                "Effect": "Allow",
+                "Action": [
+                    "cognito-idp:*"
+                ],
+                "Resource": "*"
+            }
+        ]
+    }
+
+def get_permissive_policy():
+    """Get permissive policy with wildcard resources"""
+    return {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Sid": "BedrockAgentAccess",
+                "Effect": "Allow",
+                "Action": [
+                    "bedrock-agentcore:*"
+                ],
+                "Resource": "*"
+            },
+            {
+                "Sid": "SecretsManagerAccess",
+                "Effect": "Allow",
+                "Action": [
+                    "secretsmanager:GetSecretValue",
+                    "secretsmanager:DescribeSecret"
+                ],
+                "Resource": [
+                    "arn:aws:secretsmanager:us-west-2:*:secret:mcp_server/cognito/credentials*"
+                ]
+            },
+            {
+                "Sid": "CognitoAccess",
+                "Effect": "Allow",
+                "Action": [
+                    "cognito-idp:*"
+                ],
+                "Resource": "*"
+            }
+        ]
+    }
+
+def create_policy_from_json(policy_name, policy_document, description=None):
+    """Create IAM policy from JSON document"""
+    
+    if description is None:
+        description = f"Policy for {policy_name}"
+    
+    try:
+        iam_client = boto3.client('iam')
+        
+        # Check if policy already exists
+        try:
+            existing_policy = iam_client.get_policy(PolicyArn=f"arn:aws:iam::{accountId}:policy/{policy_name}")
+            print(f"Existing policy found: {existing_policy['Policy']['Arn']}")
+            
+            # Create policy version
+            response = iam_client.create_policy_version(
+                PolicyArn=existing_policy['Policy']['Arn'],
+                PolicyDocument=json.dumps(policy_document),
+                SetAsDefault=True
+            )
+            print(f"✓ Policy update completed: {response['PolicyVersion']['VersionId']}")
+            return existing_policy['Policy']['Arn']
+            
+        except iam_client.exceptions.NoSuchEntityException:
+            # Create new policy
+            response = iam_client.create_policy(
+                PolicyName=policy_name,
+                PolicyDocument=json.dumps(policy_document),
+                Description=description
+            )
+            print(f"✓ New policy created: {response['Policy']['Arn']}")
+            return response['Policy']['Arn']
+            
+    except Exception as e:
+        print(f"Policy creation failed: {e}")
+        return None
+
+def create_updated_policy():
+    """Create updated policy for Bedrock AgentCore MCP access"""
+    return create_policy_from_json(
+        f"{agent_runtime_role_name}_updated",
+        get_updated_policy(),
+        "Updated policy for accessing Bedrock AgentCore MCP endpoints with workload identity"
+    )
+
+def create_permissive_policy():
+    """Create permissive policy for Bedrock AgentCore MCP access"""
+    return create_policy_from_json(
+        f"{agent_runtime_role_name}_permissive",
+        get_permissive_policy(),
+        "Permissive policy for accessing Bedrock AgentCore MCP endpoints"
+    )
+
+def list_available_policies():
+    """List all available policy types"""
+    policies = {
+        "comprehensive": "Comprehensive policy with all permissions (default)",
+        "updated": "Updated policy with workload identity support",
+        "permissive": "Permissive policy with wildcard resources"
+    }
+    
+    print("Available policy types:")
+    for key, description in policies.items():
+        print(f"  - {key}: {description}")
+    
+    return policies
