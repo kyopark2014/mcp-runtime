@@ -10,7 +10,7 @@ import requests
 from mcp import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
 
-def load_agent_config():
+def load_config():
     config = None
     
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -59,7 +59,7 @@ def print_exception_details(e, level=0):
         print(f"{indent}Caused by: ", end="")
         print_exception_details(e.__cause__, level + 1)
 
-agent_config = load_agent_config()
+agent_config = load_config()
 agentRuntimeArn = agent_config['agent_runtime_arn']
 print(f"agentRuntimeArn: {agentRuntimeArn}")
 

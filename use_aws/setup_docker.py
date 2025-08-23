@@ -52,7 +52,6 @@ response = agentcore_runtime.configure(
 )
 logger.info(f"Configuration response: {response}")
 
-
 # Launching MCP server to AgentCore Runtime
 logger.info("Launching MCP server to AgentCore Runtime...")
 logger.info("This may take several minutes...")
@@ -60,7 +59,6 @@ launch_result = agentcore_runtime.launch()
 logger.info("Launch completed ✓")
 logger.info(f"Agent ARN: {launch_result.agent_arn}")
 logger.info(f"Agent ID: {launch_result.agent_id}")
-
 
 # Checking AgentCore Runtime Status
 logger.info("Checking AgentCore Runtime status...")
@@ -76,8 +74,8 @@ while status not in end_status:
     status = status_response.endpoint['status']
 
 if status == 'READY':
-    logger.info("✓ AgentCore Runtime is READY!")
+    logger.info("AgentCore Runtime is READY!")
 else:
-    logger.info(f"⚠ AgentCore Runtime status: {status}")
+    logger.info(f"AgentCore Runtime status: {status}")
     
 logger.info(f"Final status: {status}")

@@ -326,7 +326,7 @@ def setup_environment_variables():
         print(f"  {key}={value}")
 
 def main():
-    print("=== AWS Bedrock AgentCore MCP Complete Setup ===\n")
+    print("=== AWS Bedrock AgentCore MCP Setup ===\n")
     
     # 1. Create Cognito User Pool
     print("1. Creating Cognito User Pool...")
