@@ -9,8 +9,8 @@ from mcp import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
 
 async def main():
-    boto_session = Session()
-    region = boto_session.region_name
+    # Use hardcoded region like test_mcp_remote.py
+    region = 'us-west-2'
     
     print(f"Using AWS region: {region}")
     
@@ -22,9 +22,8 @@ async def main():
 
         secrets_client = boto3.client('secretsmanager', region_name=region)
         response = secrets_client.get_secret_value(SecretId='mcp_server/cognito/credentials')
-        secret_value = response['SecretString']
-        parsed_secret = json.loads(secret_value)
-        bearer_token = parsed_secret['bearer_token']
+        # Use the secret string directly like test_mcp_remote.py
+        bearer_token = response['SecretString']
         print("✓ Retrieved bearer token from Secrets Manager")
         
     except Exception as e:
@@ -96,6 +95,12 @@ async def main():
                 
     except Exception as e:
         print(f"❌ Error connecting to MCP server: {e}")
+        print("\nTroubleshooting tips:")
+        print("1. Ensure BEARER_TOKEN environment variable is set")
+        print("2. Check if the agent runtime ARN is correct")
+        print("3. Verify you have permissions to access this agent runtime")
+        print("4. Check if the agent runtime is active and running")
+        print("5. Verify the Bearer token is valid and not expired")
         sys.exit(1)
 
 if __name__ == "__main__":
