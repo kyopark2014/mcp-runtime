@@ -1,21 +1,22 @@
 {
-  "projectName": "agentcore",
-  "region": "us-west-2",
-  "accountId": "262976740991",
-  "agent_runtime_role": "arn:aws:iam::262976740991:role/BedrockAgentCoreMCPRole",
-  "agent_runtime_role_name": "BedrockAgentCoreMCPRole",
-  "agentcore_memory_role": "arn:aws:iam::262976740991:role/role-agentcore-memory-for-agentcore-us-west-2",
-  "agent_runtime_arn": "arn:aws:bedrock-agentcore:us-west-2:262976740991:runtime/use_aws-mNoWe4GlnB",
-  "cognito": {
-    "policy_name": "MCPServerAuthPolicy",
-    "identity_pool_id": "us-west-2:68e15bb3-9e7f-4b1f-97d5-86ccd946f612",
-    "identity_pool_name": "mcp-agentcore-identity-pool",
-    "user_pool_id": "us-west-2_Zq9Qb9nyL",
-    "user_pool_name": "mcp-agentcore-user-pool",
-    "client_id": "6rpjijend9osng4io4qiuv31ad",
-    "client_name": "mcp-agentcore-client",
+    "projectName": "agentcore",
     "region": "us-west-2",
-    "test_username": "mcp-test-user@example.com",
-    "test_password": "TestPassword123!"
-  }
+    "accountId": "262976740991",
+    "agent_runtime_role": "arn:aws:iam::262976740991:role/BedrockAgentCoreMCPRole",
+    "agent_runtime_role_name": "BedrockAgentCoreMCPRole",
+    "agentcore_memory_role": "arn:aws:iam::262976740991:role/role-agentcore-memory-for-agentcore-us-west-2",
+    "agent_runtime_arn": "arn:aws:bedrock-agentcore:us-west-2:262976740991:runtime/agentcore_use_aws-5uzsUM4381",
+    "cognito": {
+        "discovery_url": "https://cognito-idp.us-west-2.amazonaws.com/us-west-2_Zq9Qb9nyL/.well-known/openid-configuration",
+        "policy_name": "MCPServerAuthPolicy",
+        "identity_pool_id": "us-west-2:68e15bb3-9e7f-4b1f-97d5-86ccd946f612",
+        "identity_pool_name": "mcp-agentcore-identity-pool",
+        "user_pool_id": "us-west-2_Zq9Qb9nyL",
+        "user_pool_name": "mcp-agentcore-user-pool",
+        "client_id": "6rpjijend9osng4io4qiuv31ad",
+        "client_name": "mcp-agentcore-client",
+        "region": "us-west-2",
+        "test_username": "mcp-test-user@example.com",
+        "test_password": "TestPassword123!"
+    }
 }

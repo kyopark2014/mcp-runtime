@@ -96,7 +96,15 @@ def create_agent_runtime():
                 }
             },
             networkConfiguration={"networkMode":"PUBLIC"}, 
-            roleArn=agent_runtime_role
+            roleArn=agent_runtime_role,
+            authorizerConfiguration={
+                "customJWTAuthorizer": {
+                    "allowedClients": [
+                        config['cognito']['client_id']
+                    ],
+                    "discoveryUrl": config['cognito']['discovery_url']
+                }
+            }
         )
         print(f"response of create agent runtime: {response}")
 

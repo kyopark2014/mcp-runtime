@@ -205,7 +205,7 @@ def create_cognito_identity_pool(user_pool_id):
         print(f"Failed to create Cognito Identity Pool: {e}")
         return None
 
-def update_agentcore_config_with_cognito(user_pool_id, identity_pool_id, client_id=None):
+def update_agentcore_config_with_cognito(user_pool_id, identity_pool_id, client_id, discovery_url):
     """Updates AgentCore configuration with Cognito information"""
     
     try:
@@ -217,7 +217,8 @@ def update_agentcore_config_with_cognito(user_pool_id, identity_pool_id, client_
         # Update Cognito configuration
         config['cognito'].update({
             'user_pool_id': user_pool_id,
-            'identity_pool_id': identity_pool_id
+            'identity_pool_id': identity_pool_id,
+            'discovery_url': discovery_url
         })
         
         # Update client_id if provided
@@ -353,8 +354,12 @@ def main():
     
     # 3. Update AgentCore Configuration
     print("\n3. Updating AgentCore Configuration...")
+
+    config = load_config()
+    discovery_url = f"https://cognito-idp.{config['region']}.amazonaws.com/{user_pool_id}/.well-known/openid-configuration"
+
     if user_pool_id and identity_pool_id:
-        update_agentcore_config_with_cognito(user_pool_id, identity_pool_id, client_id)
+        update_agentcore_config_with_cognito(user_pool_id, identity_pool_id, client_id, discovery_url)
     
     # 4. Create and attach MCP authentication policy
     print("\n4. Setting up MCP authentication policy...")
