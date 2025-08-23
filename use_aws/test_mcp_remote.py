@@ -67,7 +67,13 @@ async def main():
     agent_arn = agentRuntimeArn
     
     # Bearer token is required - get from environment variable or AWS Secrets Manager
-    bearer_token = os.getenv('BEARER_TOKEN')
+    # bearer_token = os.getenv('BEARER_TOKEN')
+    secret_name = 'mcp_server/cognito/credentials'
+    region = agent_config['region']
+    session = boto3.Session()
+    client = session.client('secretsmanager', region_name=region)
+    response = client.get_secret_value(SecretId=secret_name)
+    bearer_token = response['SecretString']
     
     if not bearer_token:
         print("Error: BEARER_TOKEN environment variable is required")

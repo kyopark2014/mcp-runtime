@@ -93,7 +93,7 @@ def create_cognito_identity_pool(user_pool_id):
         print("Failed to load configuration")
         return None
     
-    identity_pool_name = "mcp-agentcore-identity-pool"
+    identity_pool_name = config['cognito']['identity_pool_name']
     
     try:
         identity_client = boto3.client('cognito-identity', region_name=config['region'])
@@ -155,20 +155,18 @@ def update_agentcore_config_with_cognito(user_pool_id, identity_pool_id):
         with open(config_file, "w") as f:
             json.dump(config, f, indent=2)
         
-        print(f"✓ AgentCore configuration updated successfully: {config_file}")
+        print(f"AgentCore configuration updated successfully: {config_file}")
         
     except Exception as e:
         print(f"Configuration update failed: {e}")
 
-def create_mcp_auth_policy():
+def create_mcp_auth_policy(policy_name: str):
     """Creates additional IAM policy for MCP authentication"""
     
     config = load_config()
     if not config:
         print("Failed to load configuration")
         return None
-    
-    policy_name = "MCPServerAuthPolicy"
     
     policy_document = {
         "Version": "2012-10-17",
@@ -237,13 +235,14 @@ def update_bedrock_agentcore_role():
         print("Failed to load configuration")
         return False
     
-    role_name = config['agent_runtime_role'].split('/')[-1]
-    policy_arn = create_mcp_auth_policy()
+    policy_name = config['cognito']['policy_name']    
+    policy_arn = create_mcp_auth_policy(policy_name)
     
     if not policy_arn:
         print("Failed to create MCP authentication policy")
         return False
     
+    role_name = config['agent_runtime_role'].split('/')[-1]    
     try:
         iam_client = boto3.client('iam')
         
@@ -253,7 +252,7 @@ def update_bedrock_agentcore_role():
             PolicyArn=policy_arn
         )
         
-        print(f"✓ MCP authentication policy attached successfully: {policy_arn}")
+        print(f"MCP authentication policy attached successfully: {policy_arn}")
         return True
         
     except Exception as e:
@@ -347,23 +346,5 @@ def main():
     print("\n4. Setting up MCP authentication policy...")
     update_bedrock_agentcore_role()
     
-    # 5. Create MCP server configuration file
-    print("\n5. Creating MCP server configuration file...")
-    create_mcp_server_config()
-    
-    # 6. Set up environment variables
-    print("\n6. Setting up environment variables...")
-    setup_environment_variables()
-    
-    print("\n=== Setup Complete ===")
-    print("Now proceed with the following steps:")
-    print("1. agentcore launch (redeploy AgentCore)")
-    print("2. Test MCP client")
-    
-    if user_pool_id and identity_pool_id:
-        print(f"\nCreated resources:")
-        print(f"  User Pool ID: {user_pool_id}")
-        print(f"  Identity Pool ID: {identity_pool_id}")
-
 if __name__ == "__main__":
     main()

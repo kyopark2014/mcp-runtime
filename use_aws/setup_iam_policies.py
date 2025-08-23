@@ -3,7 +3,19 @@ import json
 import os
 from datetime import datetime
 
-accountId = boto3.client('sts').get_caller_identity()['Account']
+def load_config():
+    config = None
+    
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    config_path = os.path.join(script_dir, "config.json")
+    
+    with open(config_path, "r", encoding="utf-8") as f:
+        config = json.load(f)    
+    return config
+
+config = load_config()
+accountId = config['accountId']
+agent_runtime_role_name = config['agent_runtime_role_name']
 
 def get_current_role_arn():
     """Get the ARN of the currently used IAM role"""
@@ -20,7 +32,7 @@ def get_current_role_arn():
 def create_bedrock_agentcore_policy():
     """Create IAM policy for Bedrock AgentCore MCP access"""
     
-    policy_name = "BedrockAgentCoreMCPAccessPolicy"
+    policy_name = agent_runtime_role_name
     policy_description = "Policy for accessing Bedrock AgentCore MCP endpoints"
     
     # Policy document for Bedrock AgentCore MCP access
@@ -77,6 +89,46 @@ def create_bedrock_agentcore_policy():
                     "cognito-identity:GetCredentialsForIdentity"
                 ],
                 "Resource": "*"
+            },
+            {
+                "Sid": "ECRAccess",
+                "Effect": "Allow",
+                "Action": [
+                    "ecr:GetAuthorizationToken",
+                    "ecr:BatchGetImage",
+                    "ecr:GetDownloadUrlForLayer",
+                    "ecr:DescribeRepositories",
+                    "ecr:ListImages",
+                    "ecr:DescribeImages"
+                ],
+                "Resource": "*"
+            },
+            {
+                "Sid": "AgentCoreRuntimeAccess",
+                "Effect": "Allow",
+                "Action": [
+                    "bedrock-agentcore:CreateAgentRuntime",
+                    "bedrock-agentcore:DeleteAgentRuntime",
+                    "bedrock-agentcore:GetAgentRuntime",
+                    "bedrock-agentcore:ListAgentRuntimes",
+                    "bedrock-agentcore:UpdateAgentRuntime"
+                ],
+                "Resource": "*"
+            },
+            {
+                "Sid": "LogsAccess",
+                "Effect": "Allow",
+                "Action": [
+                    "logs:CreateLogGroup",
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents",
+                    "logs:DescribeLogGroups",
+                    "logs:DescribeLogStreams"
+                ],
+                "Resource": [
+                    "arn:aws:logs:us-west-2:*:log-group:/aws/bedrock-agentcore/*",
+                    "arn:aws:logs:us-west-2:*:log-group:/aws/bedrock-agentcore/*:log-stream:*"
+                ]
             }
         ]
     }
