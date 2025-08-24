@@ -17,10 +17,6 @@ def load_config():
         print(f"Failed to load config.json: {e}")
         return None
 
-
-
-
-
 def create_test_user():
     """Create a test user in Cognito User Pool"""
     try:
