@@ -17,94 +17,9 @@ def load_config():
         print(f"Failed to load config.json: {e}")
         return None
 
-def fix_cognito_client():
-    """Fix Cognito app client authentication flows"""
-    config = load_config()
-    if not config:
-        print("Failed to load configuration")
-        return False
-    
-    user_pool_id = config['cognito']['user_pool_id']
-    client_id = config['cognito']['client_id']
-    region = config['region']
-    
-    print(f"Fixing Cognito app client: {client_id}")
-    print(f"User Pool: {user_pool_id}")
-    print(f"Region: {region}")
-    
-    try:
-        cognito_idp_client = boto3.client('cognito-idp', region_name=region)
-        
-        # Update the app client to enable ADMIN_NO_SRP_AUTH flow
-        response = cognito_idp_client.update_user_pool_client(
-            UserPoolId=user_pool_id,
-            ClientId=client_id,
-            ExplicitAuthFlows=[
-                'ALLOW_ADMIN_USER_PASSWORD_AUTH',
-                'ALLOW_USER_PASSWORD_AUTH',
-                'ALLOW_REFRESH_TOKEN_AUTH',
-                'ALLOW_USER_SRP_AUTH'
-            ],
-            ReadAttributes=[
-                'email',
-                'email_verified',
-                'name'
-            ],
-            WriteAttributes=[
-                'email',
-                'name'
-            ]
-        )
-        
-        print("✓ Cognito app client updated successfully")
-        print(f"Client ID: {response['UserPoolClient']['ClientId']}")
-        print(f"Client Name: {response['UserPoolClient']['ClientName']}")
-        
-        return True
-        
-    except Exception as e:
-        print(f"Error updating Cognito app client: {e}")
-        return False
 
-def fix_identity_pool():
-    """Fix Identity Pool to allow unauthenticated access for testing"""
-    config = load_config()
-    if not config:
-        print("Failed to load configuration")
-        return False
-    
-    identity_pool_id = config['cognito']['identity_pool_id']
-    region = config['region']
-    
-    print(f"Fixing Identity Pool: {identity_pool_id}")
-    
-    try:
-        cognito_identity_client = boto3.client('cognito-identity', region_name=region)
-        
-        # Get current identity pool configuration
-        response = cognito_identity_client.describe_identity_pool(
-            IdentityPoolId=identity_pool_id
-        )
-        
-        print(f"Current Identity Pool: {response['IdentityPoolName']}")
-        print(f"Allow unauthenticated identities: {response.get('AllowUnauthenticatedIdentities', False)}")
-        
-        # Update identity pool to allow unauthenticated access for testing
-        update_response = cognito_identity_client.update_identity_pool(
-            IdentityPoolId=identity_pool_id,
-            IdentityPoolName=response['IdentityPoolName'],
-            AllowUnauthenticatedIdentities=True,
-            CognitoIdentityProviders=response.get('CognitoIdentityProviders', []),
-            SupportedLoginProviders=response.get('SupportedLoginProviders', {})
-        )
-        
-        print("✓ Identity Pool updated to allow unauthenticated access")
-        
-        return True
-        
-    except Exception as e:
-        print(f"Error updating Identity Pool: {e}")
-        return False
+
+
 
 def create_test_user():
     """Create a test user in Cognito User Pool"""
@@ -345,7 +260,7 @@ def create_cognito_user_pool():
         return None
 
 def create_cognito_identity_pool(user_pool_id):
-    """Creates Cognito Identity Pool"""
+    """Creates Cognito Identity Pool and fixes App Client authentication flows"""
     
     config = load_config()
     if not config:
@@ -353,9 +268,45 @@ def create_cognito_identity_pool(user_pool_id):
         return None
     
     identity_pool_name = config['cognito']['identity_pool_name']
+    client_id = config['cognito'].get('client_id', '')
+    region = config['region']
+    
+    if not client_id:
+        print("Warning: client_id not found in config. Please run the setup again.")
+        return None
     
     try:
-        identity_client = boto3.client('cognito-identity', region_name=config['region'])
+        # First, fix the Cognito app client authentication flows
+        print("Fixing Cognito app client authentication flows...")
+        cognito_idp_client = boto3.client('cognito-idp', region_name=region)
+        
+        try:
+            # Update the app client to enable proper authentication flows
+            response = cognito_idp_client.update_user_pool_client(
+                UserPoolId=user_pool_id,
+                ClientId=client_id,
+                ExplicitAuthFlows=[
+                    'ALLOW_ADMIN_USER_PASSWORD_AUTH',
+                    'ALLOW_USER_PASSWORD_AUTH',
+                    'ALLOW_REFRESH_TOKEN_AUTH',
+                    'ALLOW_USER_SRP_AUTH'
+                ],
+                ReadAttributes=[
+                    'email',
+                    'email_verified',
+                    'name'
+                ],
+                WriteAttributes=[
+                    'email',
+                    'name'
+                ]
+            )
+            print("✓ Cognito app client authentication flows updated successfully")
+        except Exception as e:
+            print(f"Warning: Failed to update Cognito app client: {e}")
+        
+        # Now create or find Identity Pool
+        identity_client = boto3.client('cognito-identity', region_name=region)
         
         # Check existing Identity Pool
         try:
@@ -363,25 +314,36 @@ def create_cognito_identity_pool(user_pool_id):
             for pool in response['IdentityPools']:
                 if pool['IdentityPoolName'] == identity_pool_name:
                     print(f"Existing Identity Pool found: {pool['IdentityPoolId']}")
-                    return pool['IdentityPoolId']
+                    identity_pool_id = pool['IdentityPoolId']
+                    
+                    # Update existing identity pool to allow unauthenticated access for testing
+                    try:
+                        print("Updating existing Identity Pool to allow unauthenticated access for testing...")
+                        pool_response = identity_client.describe_identity_pool(IdentityPoolId=identity_pool_id)
+                        update_response = identity_client.update_identity_pool(
+                            IdentityPoolId=identity_pool_id,
+                            IdentityPoolName=identity_pool_name,
+                            AllowUnauthenticatedIdentities=True,
+                            CognitoIdentityProviders=pool_response.get('CognitoIdentityProviders', []),
+                            SupportedLoginProviders=pool_response.get('SupportedLoginProviders', {})
+                        )
+                        print("✓ Existing Identity Pool updated to allow unauthenticated access for testing")
+                    except Exception as e:
+                        print(f"Warning: Failed to update existing Identity Pool for testing: {e}")
+                    
+                    return identity_pool_id
         except Exception as e:
             print(f"Failed to check Identity Pool list: {e}")
         
         # Create new Identity Pool
         print("Creating new Cognito Identity Pool...")
         
-        # Get client ID from config
-        client_id = config['cognito'].get('client_id', '')
-        if not client_id:
-            print("Warning: client_id not found in config. Please run the setup again.")
-            return None
-        
         response = identity_client.create_identity_pool(
             IdentityPoolName=identity_pool_name,
             AllowUnauthenticatedIdentities=False,
             CognitoIdentityProviders=[
                 {
-                    'ProviderName': f'cognito-idp.{config["region"]}.amazonaws.com/{user_pool_id}',
+                    'ProviderName': f'cognito-idp.{region}.amazonaws.com/{user_pool_id}',
                     'ClientId': client_id,
                     'ServerSideTokenCheck': False
                 }
@@ -390,6 +352,20 @@ def create_cognito_identity_pool(user_pool_id):
         
         identity_pool_id = response['IdentityPoolId']
         print(f"✓ Identity Pool created successfully: {identity_pool_id}")
+        
+        # Update identity pool to allow unauthenticated access for testing
+        try:
+            print("Updating Identity Pool to allow unauthenticated access for testing...")
+            update_response = identity_client.update_identity_pool(
+                IdentityPoolId=identity_pool_id,
+                IdentityPoolName=identity_pool_name,
+                AllowUnauthenticatedIdentities=True,
+                CognitoIdentityProviders=response.get('CognitoIdentityProviders', []),
+                SupportedLoginProviders=response.get('SupportedLoginProviders', {})
+            )
+            print("✓ Identity Pool updated to allow unauthenticated access for testing")
+        except Exception as e:
+            print(f"Warning: Failed to update Identity Pool for testing: {e}")
         
         return identity_pool_id
         
@@ -819,43 +795,27 @@ def main():
     # 4. Create and attach MCP authentication policy
     print("\n4. Setting up MCP authentication policy...")
     update_bedrock_agentcore_role()
-    
-    # 5. Fix Cognito app client authentication flows
-    print("\n5. Fixing Cognito app client authentication flows...")
-    if user_pool_id and client_id:
-        if fix_cognito_client():
-            print("✓ Cognito app client fixed successfully")
-        else:
-            print("⚠ Warning: Failed to fix Cognito app client")
-    
-    # 6. Create test user
-    print("\n6. Creating test user...")
+        
+    # 5. Create test user
+    print("\n5. Creating test user...")
     if user_pool_id:
         success = create_test_user()
         if success:
-            print("\n✓ Test user setup completed successfully")
+            print("\nTest user setup completed successfully")
             
-            # 7. Create Bearer token
-            print("\n7. Creating Bearer token...")
+            # 6. Create Bearer token
+            print("\n6. Creating Bearer token...")
             token = create_bearer_token()
             if token:
-                print("\n✓ Bearer token created and saved successfully")
+                print("\nBearer token created and saved successfully")
                 print("\nSetup completed! You can now use the MCP server with authentication.")
             else:
-                print("\n✗ Failed to create Bearer token")
+                print("\nFailed to create Bearer token")
                 print("\nPlease check your AWS credentials and User Pool configuration")
         else:
-            print("\n✗ Failed to create test user")
+            print("\nFailed to create test user")
             print("\nPlease check your AWS credentials and User Pool configuration")
-    
-    # 8. Optional: Fix Identity Pool for testing (allows unauthenticated access)
-    print("\n8. Optional: Fixing Identity Pool for testing...")
-    if identity_pool_id:
-        if fix_identity_pool():
-            print("✓ Identity Pool updated for testing")
-        else:
-            print("⚠ Warning: Failed to update Identity Pool (this is optional)")
-    
+        
     print("\n=== Setup Summary ===")
     print("✓ Cognito User Pool and Identity Pool created")
     print("✓ App client authentication flows configured")
