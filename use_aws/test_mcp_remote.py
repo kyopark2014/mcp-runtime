@@ -125,6 +125,27 @@ def print_exception_details(e, level=0):
         print(f"{indent}Caused by: ", end="")
         print_exception_details(e.__cause__, level + 1)
 
+def test_basic_connection(url, headers):
+    """Test basic HTTP connection before attempting MCP"""
+    print(f"\n=== 기본 연결 테스트 ===")
+    print(f"URL: {url}")
+    
+    try:
+        # Simple GET request to test connectivity
+        response = requests.get(url, headers=headers, timeout=10)
+        print(f"기본 연결 테스트 응답: {response.status_code}")
+        print(f"응답 헤더: {dict(response.headers)}")
+        return True
+    except requests.exceptions.Timeout:
+        print("❌ 기본 연결 타임아웃 (10초)")
+        return False
+    except requests.exceptions.ConnectionError:
+        print("❌ 기본 연결 실패 - 네트워크 문제")
+        return False
+    except Exception as e:
+        print(f"❌ 기본 연결 에러: {e}")
+        return False
+
 agent_config = load_config()
 agentRuntimeArn = agent_config['agent_runtime_arn']
 print(f"agentRuntimeArn: {agentRuntimeArn}")
@@ -143,8 +164,8 @@ async def main():
     print("Checking Agent Runtime OAuth configuration...")
     oauth_config = check_agent_runtime_oauth_config(agent_arn, region)
     
-    # Bearer token is required - get from environment variable or AWS Secrets Manager
-    # bearer_token = os.getenv('BEARER_TOKEN')
+    # Bearer token is required - get from AWS Secrets Manager
+    # Use Access Token instead of ID Token for MCP authentication
     secret_name = 'mcp_server/cognito/credentials'
     session = boto3.Session()
     client = session.client('secretsmanager', region_name=region)
@@ -154,12 +175,26 @@ async def main():
     # Parse bearer token from JSON if needed
     try:
         bearer_token_data = json.loads(bearer_token_raw)
-        if isinstance(bearer_token_data, dict) and 'bearer_token' in bearer_token_data:
-            bearer_token = bearer_token_data['bearer_token']
+        if isinstance(bearer_token_data, dict):
+            # Try access_token first (preferred for MCP), then bearer_token, then id_token
+            if 'access_token' in bearer_token_data:
+                bearer_token = bearer_token_data['access_token']
+                print("Using Access Token for authentication")
+            elif 'bearer_token' in bearer_token_data:
+                bearer_token = bearer_token_data['bearer_token']
+                print("Using Bearer Token for authentication")
+            elif 'id_token' in bearer_token_data:
+                bearer_token = bearer_token_data['id_token']
+                print("Using ID Token for authentication")
+            else:
+                bearer_token = bearer_token_raw
+                print("Using raw token for authentication")
         else:
             bearer_token = bearer_token_raw
+            print("Using raw token for authentication")
     except json.JSONDecodeError:
         bearer_token = bearer_token_raw
+        print("Using raw token for authentication")
     
     # Remove duplicate "Bearer " prefix if present
     if bearer_token.startswith('Bearer '):
@@ -249,20 +284,116 @@ async def main():
     mcp_url = successful_url
     print(f"\n성공한 엔드포인트: {mcp_url}")
 
+    # Test basic connection first
+    if not test_basic_connection(mcp_url, headers):
+        print("기본 연결 테스트 실패. MCP 연결을 시도하지 않습니다.")
+        return
+
     try:
+        print(f"\n=== MCP 연결 시도 중 ===")
+        print(f"URL: {mcp_url}")
+        print(f"Headers: {headers}")
+        print(f"Timeout: 120초")
         
-        # Now try the MCP connection
+        # Now try the MCP connection with better error handling
+        print("1. streamablehttp_client 연결 시도 중...")
         async with streamablehttp_client(mcp_url, headers, timeout=120, terminate_on_close=False) as (
             read_stream, write_stream,_,):
-
+            
+            print("2. streamablehttp_client 연결 성공!")
+            print("3. ClientSession 생성 중...")
+            
             async with ClientSession(read_stream, write_stream) as session:
-                await session.initialize()
-                tool_result = await session.list_tools()
-                print("Available tools:")
-                print(json.dumps(tool_result, indent=2))
+                print("4. ClientSession 생성 성공!")
+                print("5. session.initialize() 호출 중...")
                 
+                # Add timeout for initialize
+                try:
+                    await asyncio.wait_for(session.initialize(), timeout=30)
+                    print("6. session.initialize() 성공!")
+                except asyncio.TimeoutError:
+                    print("❌ session.initialize() 타임아웃 (30초)")
+                    return
+                except Exception as init_error:
+                    print(f"❌ session.initialize() 실패: {init_error}")
+                    return
+                
+                print("7. session.list_tools() 호출 중...")
+                
+                # Add timeout for list_tools
+                try:
+                    tool_result = await asyncio.wait_for(session.list_tools(), timeout=30)
+                    print(f"8. session.list_tools() 성공!")
+                    print(f"\nAvailable tools: {len(tool_result.tools)}")
+                    for tool in tool_result.tools:
+                        print(f"  - {tool.name}: {tool.description[:100]}...")
+                except asyncio.TimeoutError:
+                    print("❌ session.list_tools() 타임아웃 (30초)")
+                    return
+                except Exception as tools_error:
+                    print(f"❌ session.list_tools() 실패: {tools_error}")
+                    return
+                
+                # Test AWS S3 bucket list retrieval
+                print("\n=== Testing AWS S3 List Buckets ===")
+                s3_params = {
+                    "service_name": "s3",
+                    "operation_name": "list_buckets",
+                    "parameters": {},
+                    "region": "us-west-2",
+                    "label": "List S3 buckets"
+                }
+                
+                print("9. S3 list_buckets 호출 중...")
+                try:
+                    result = await asyncio.wait_for(session.call_tool("use_aws", s3_params), timeout=60)
+                    print(f"10. S3 list_buckets 성공!")
+                    print(f"Result: {result}")
+                    
+                    if hasattr(result, 'content') and result.content:
+                        for content in result.content:
+                            if hasattr(content, 'text'):
+                                print(f"Content: {content.text}")
+                except asyncio.TimeoutError:
+                    print("❌ S3 list_buckets 타임아웃 (60초)")
+                except Exception as s3_error:
+                    print(f"❌ S3 list_buckets 실패: {s3_error}")
+                
+                # Test AWS EC2 instance list retrieval
+                print("\n=== Testing AWS EC2 Describe Instances ===")
+                ec2_params = {
+                    "service_name": "ec2",
+                    "operation_name": "describe_instances",
+                    "parameters": {"MaxResults": 5},
+                    "region": "us-west-2",
+                    "label": "List EC2 instances"
+                }
+                
+                print("11. EC2 describe_instances 호출 중...")
+                try:
+                    result = await asyncio.wait_for(session.call_tool("use_aws", ec2_params), timeout=60)
+                    print(f"12. EC2 describe_instances 성공!")
+                    print(f"Result: {result}")
+                    
+                    if hasattr(result, 'content') and result.content:
+                        for content in result.content:
+                            if hasattr(content, 'text'):
+                                print(f"Content: {content.text}")
+                except asyncio.TimeoutError:
+                    print("❌ EC2 describe_instances 타임아웃 (60초)")
+                except Exception as ec2_error:
+                    print(f"❌ EC2 describe_instances 실패: {ec2_error}")
+                
+                print("\n=== MCP 연결 테스트 완료 ===")
+                
+    except asyncio.TimeoutError:
+        print("❌ MCP 연결 타임아웃 (120초)")
+        print("가능한 원인:")
+        print("- 네트워크 연결 문제")
+        print("- Agent Runtime이 응답하지 않음")
+        print("- 인증 토큰이 만료됨")
     except Exception as e:
-        print(f"Error connecting to MCP server:")
+        print(f"❌ MCP 연결 실패:")
         print_exception_details(e)
         
         print("\nTroubleshooting tips:")
@@ -273,6 +404,7 @@ async def main():
         print("5. Verify the Bearer token is valid and not expired")
         print("6. Check AWS credentials and IAM permissions")
         print("7. Verify the agent runtime is in the correct region")
+        print("8. Check network connectivity to AWS endpoints")
 
 if __name__ == "__main__":
     asyncio.run(main())

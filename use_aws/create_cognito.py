@@ -527,7 +527,7 @@ def update_bedrock_agentcore_role():
         return False
 
 def create_bearer_token_with_user_pool():
-    """Create Bearer token using Cognito User Pool authentication"""
+    """Create Bearer token using Cognito User Pool authentication with Access Token"""
     try:
         config = load_config()
         if not config:
@@ -574,8 +574,56 @@ def create_bearer_token_with_user_pool():
                 print(f"ID Token: {id_token[:20]}...{id_token[-20:]}")
                 print(f"Access Token: {access_token[:20]}...{access_token[-20:]}")
                 
-                # Use the ID token as bearer token
-                bearer_token = f"Bearer {id_token}"
+                # Decode and analyze both tokens
+                import base64
+                
+                # Decode ID token
+                id_parts = id_token.split('.')
+                id_payload = id_parts[1]
+                id_payload += '=' * (4 - len(id_payload) % 4)
+                id_decoded = base64.b64decode(id_payload)
+                id_data = json.loads(id_decoded)
+                
+                # Decode Access token
+                access_parts = access_token.split('.')
+                access_payload = access_parts[1]
+                access_payload += '=' * (4 - len(access_payload) % 4)
+                access_decoded = base64.b64decode(access_payload)
+                access_data = json.loads(access_decoded)
+                
+                print("\n=== Token Analysis ===")
+                print(f"ID Token - aud: {id_data.get('aud')}, token_use: {id_data.get('token_use')}")
+                print(f"Access Token - client_id: {access_data.get('client_id')}, token_use: {access_data.get('token_use')}")
+                
+                # Store both tokens in Secrets Manager for MCP authentication
+                # Use Access Token as the primary bearer token for MCP
+                token_data = {
+                    'id_token': id_token,
+                    'access_token': access_token,
+                    'bearer_token': access_token,  # Use access token as default bearer token
+                    'id_token_claims': id_data,
+                    'access_token_claims': access_data
+                }
+                
+                # Store in Secrets Manager
+                try:
+                    secrets_client = boto3.client('secretsmanager', region_name=region)
+                    secret_name = 'mcp_server/cognito/credentials'
+                    
+                    secrets_client.update_secret(
+                        SecretId=secret_name,
+                        SecretString=json.dumps(token_data)
+                    )
+                    
+                    print(f"✓ Updated Secrets Manager with both tokens: {secret_name}")
+                    print("✓ Using Access Token as primary bearer token for MCP authentication")
+                    
+                except Exception as secrets_error:
+                    print(f"Warning: Could not update Secrets Manager: {secrets_error}")
+                    print("Continuing with bearer token creation...")
+                
+                # Return Access Token as bearer token (preferred for MCP)
+                bearer_token = f"Bearer {access_token}"
                 return bearer_token
             else:
                 print("Authentication failed - no authentication result")

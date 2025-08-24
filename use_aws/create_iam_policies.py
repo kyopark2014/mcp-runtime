@@ -287,36 +287,6 @@ def update_agentcore_config():
     except Exception as e:
         print(f"Configuration update failed: {e}")
 
-def main():
-    print("=== AWS Bedrock AgentCore IAM Setup ===\n")
-    
-    # Check current role information
-    print("1. Checking current IAM information...")
-    current_role = get_current_role_arn()
-    
-    # Create Bedrock AgentCore policy
-    print("\n2. Creating Bedrock AgentCore policy...")
-    policy_arn = create_bedrock_agentcore_policy()
-    
-    # Create Bedrock AgentCore role
-    print("\n3. Creating Bedrock AgentCore role...")
-    role_arn = create_bedrock_agentcore_role()
-    
-    # Update AgentCore configuration
-    print("\n4. Updating AgentCore configuration...")
-    update_agentcore_config()
-    
-    print("\n=== Setup Complete ===")
-    if role_arn:
-        print(f"Created role ARN: {role_arn}")
-        print("\nYou can now redeploy AgentCore using the following command:")
-        print("agentcore launch")
-    else:
-        print("Role creation failed")
-
-if __name__ == "__main__":
-    main()
-
 # Alternative Policy Definitions (for reference and testing)
 def get_updated_policy():
     """Get updated policy with workload identity support"""
@@ -454,3 +424,32 @@ def list_available_policies():
         print(f"  - {key}: {description}")
     
     return policies
+
+
+def main():
+    print("=== AWS Bedrock AgentCore IAM Setup ===\n")
+    
+    # Check current role information
+    print("1. Checking current IAM information...")
+    current_role = get_current_role_arn()
+    
+    # Create Bedrock AgentCore policy
+    print("\n2. Creating Bedrock AgentCore policy...")
+    policy_arn = create_bedrock_agentcore_policy()
+    
+    # Create Bedrock AgentCore role
+    print("\n3. Creating Bedrock AgentCore role...")
+    role_arn = create_bedrock_agentcore_role()
+    
+    # Update AgentCore configuration
+    print("\n4. Updating AgentCore configuration...")
+    update_agentcore_config()
+    
+    print("\n=== Setup Complete ===")
+    if role_arn:
+        print(f"Created role ARN: {role_arn}")
+    else:
+        print("Role creation failed")
+
+if __name__ == "__main__":
+    main()
