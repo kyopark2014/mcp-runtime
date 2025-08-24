@@ -209,8 +209,8 @@ async def main():
     
     # Try different endpoint URLs
     test_urls = [
-        f"https://bedrock-agentcore.us-west-2.amazonaws.com/runtimes/{encoded_arn}/invocations",
         f"https://bedrock-agentcore.us-west-2.amazonaws.com/runtimes/{encoded_arn}/invocations?qualifier=DEFAULT",
+        f"https://bedrock-agentcore.us-west-2.amazonaws.com/runtimes/{encoded_arn}/invocations",
         f"https://bedrock-agentcore.us-west-2.amazonaws.com/runtimes/{encoded_arn}/mcp?qualifier=DEFAULT",
         f"https://bedrock-agentcore.us-west-2.amazonaws.com/runtimes/{encoded_arn}/mcp",        
     ]

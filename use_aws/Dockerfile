@@ -66,4 +66,4 @@ EXPOSE 8000
 
 COPY . .
 
-CMD ["opentelemetry-instrument", "python", "-m", "mcp_server"]
+CMD ["opentelemetry-instrument", "python", "-m", "mcp_server_use_aws"]
