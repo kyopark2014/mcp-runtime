@@ -2130,7 +2130,7 @@ async def run_langgraph_agent(query, mcp_servers, history_mode, containers):
     # If no tools available, use general conversation
     if not tools:
         logger.warning("No tools available, using general conversation mode")
-        result = "MCP 서버에 연결할 수 없습니다. 일반 대화 모드로 답변합니다."
+        result = "MCP 서버를 하나 이상 선택하세요."
         if containers is not None:
             containers['notification'][0].markdown(result)
         return result, image_url
