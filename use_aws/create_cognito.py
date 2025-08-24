@@ -600,7 +600,7 @@ def create_bearer_token_with_user_pool():
                 token_data = {
                     'id_token': id_token,
                     'access_token': access_token,
-                    'bearer_token': access_token,  # Use access token as default bearer token
+                    'bearer_token': access_token,  # Use access token as default bearer token (without Bearer prefix)
                     'id_token_claims': id_data,
                     'access_token_claims': access_data
                 }
@@ -610,21 +610,30 @@ def create_bearer_token_with_user_pool():
                     secrets_client = boto3.client('secretsmanager', region_name=region)
                     secret_name = 'mcp_server/cognito/credentials'
                     
-                    secrets_client.update_secret(
-                        SecretId=secret_name,
-                        SecretString=json.dumps(token_data)
-                    )
+                    # Try to update existing secret first
+                    try:
+                        secrets_client.update_secret(
+                            SecretId=secret_name,
+                            SecretString=json.dumps(token_data)
+                        )
+                        print(f"✓ Updated Secrets Manager with both tokens: {secret_name}")
+                    except secrets_client.exceptions.ResourceNotFoundException:
+                        # If secret doesn't exist, create it
+                        secrets_client.create_secret(
+                            Name=secret_name,
+                            SecretString=json.dumps(token_data),
+                            Description='Bearer token for MCP server authentication'
+                        )
+                        print(f"✓ Created Secrets Manager secret with both tokens: {secret_name}")
                     
-                    print(f"✓ Updated Secrets Manager with both tokens: {secret_name}")
                     print("✓ Using Access Token as primary bearer token for MCP authentication")
                     
                 except Exception as secrets_error:
                     print(f"Warning: Could not update Secrets Manager: {secrets_error}")
                     print("Continuing with bearer token creation...")
                 
-                # Return Access Token as bearer token (preferred for MCP)
-                bearer_token = f"Bearer {access_token}"
-                return bearer_token
+                # Return Access Token WITHOUT Bearer prefix (the test script will add it)
+                return access_token
             else:
                 print("Authentication failed - no authentication result")
                 return None
@@ -737,7 +746,20 @@ def create_bearer_token():
             config = load_config()
             region = config['region']
             secrets_client = boto3.client('secretsmanager', region_name=region)
-            secret_value = json.dumps({'bearer_token': token})
+            
+            # Get existing secret data if it exists
+            existing_data = {}
+            try:
+                existing_response = secrets_client.get_secret_value(SecretId='mcp_server/cognito/credentials')
+                existing_data = json.loads(existing_response['SecretString'])
+            except secrets_client.exceptions.ResourceNotFoundException:
+                pass
+            except Exception as e:
+                print(f"Warning: Could not read existing secret: {e}")
+            
+            # Update with new bearer token (without Bearer prefix)
+            existing_data['bearer_token'] = token
+            secret_value = json.dumps(existing_data)
             
             # Try to update existing secret first
             try:

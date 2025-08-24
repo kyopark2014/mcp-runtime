@@ -42,7 +42,7 @@ def get_aws_auth_headers(url, method='GET', body=''):
         return None
 
 def check_agent_runtime_status(agent_arn, region):
-    """Check if the agent runtime is active and accessible"""
+    """Check if the agent runtime is active and accessible - Fixed version"""
     try:
         session = boto3.Session()
         
@@ -52,25 +52,35 @@ def check_agent_runtime_status(agent_arn, region):
             print("Using bedrock-agent-runtime client")
         except:
             # Fallback to bedrock client
-            client = session.client('bedrock', region_name=region)
-            print("Using bedrock client")
+            try:
+                client = session.client('bedrock', region_name=region)
+                print("Using bedrock client")
+            except:
+                print("Could not create any Bedrock client, skipping status check...")
+                return True
         
         # Extract runtime name from ARN
         runtime_name = agent_arn.split('/')[-1]
         print(f"Checking runtime: {runtime_name}")
         
-        # Try to describe the agent runtime
+        # Try to describe the agent runtime - Note: This API may not exist
         try:
-            # Try different API methods
-            response = client.describe_agent_runtime(agentId=runtime_name)
-            status = response.get('agentRuntime', {}).get('status')
-            print(f"Agent Runtime Status: {status}")
-            
-            if status == 'ACTIVE':
-                return True
+            # Try different possible API methods
+            if hasattr(client, 'describe_agent_runtime'):
+                response = client.describe_agent_runtime(agentId=runtime_name)
+                status = response.get('agentRuntime', {}).get('status')
+                print(f"Agent Runtime Status: {status}")
+                
+                if status == 'ACTIVE':
+                    return True
+                else:
+                    print(f"Warning: Agent Runtime is not active. Current status: {status}")
+                    return False
             else:
-                print(f"Warning: Agent Runtime is not active. Current status: {status}")
-                return False
+                print("describe_agent_runtime method not available in this SDK version")
+                # Try alternative methods or just proceed
+                print("Proceeding without status check...")
+                return True
                 
         except Exception as api_error:
             print(f"API error: {api_error}")
@@ -84,10 +94,20 @@ def check_agent_runtime_status(agent_arn, region):
         return True
 
 def check_agent_runtime_oauth_config(agent_arn, region):
-    """Check Agent Runtime OAuth configuration"""
+    """Check Agent Runtime OAuth configuration - Fixed version"""
     try:
         session = boto3.Session()
-        client = session.client('bedrock-agentcore', region_name=region)
+        
+        # Try different client types
+        client = None
+        try:
+            client = session.client('bedrock-agentcore', region_name=region)
+        except:
+            try:
+                client = session.client('bedrock-agent-runtime', region_name=region)
+            except:
+                print("Could not create Bedrock client for OAuth config check")
+                return None
         
         # Extract runtime name from ARN
         runtime_name = agent_arn.split('/')[-1]
@@ -96,9 +116,13 @@ def check_agent_runtime_oauth_config(agent_arn, region):
         # Try to get agent runtime details
         try:
             # This might not work with current API, but worth trying
-            response = client.describe_agent_runtime(agentId=runtime_name)
-            print(f"Agent Runtime details: {response}")
-            return response
+            if hasattr(client, 'describe_agent_runtime'):
+                response = client.describe_agent_runtime(agentId=runtime_name)
+                print(f"Agent Runtime details: {response}")
+                return response
+            else:
+                print("describe_agent_runtime method not available")
+                return None
         except Exception as e:
             print(f"Could not get agent runtime details: {e}")
             return None
@@ -169,8 +193,14 @@ async def main():
     secret_name = 'mcp_server/cognito/credentials'
     session = boto3.Session()
     client = session.client('secretsmanager', region_name=region)
-    response = client.get_secret_value(SecretId=secret_name)
-    bearer_token_raw = response['SecretString']
+    
+    try:
+        response = client.get_secret_value(SecretId=secret_name)
+        bearer_token_raw = response['SecretString']
+    except Exception as e:
+        print(f"Error getting secret from Secrets Manager: {e}")
+        print("Please run create_cognito.py to set up authentication")
+        return
     
     # Parse bearer token from JSON if needed
     try:
@@ -196,13 +226,13 @@ async def main():
         bearer_token = bearer_token_raw
         print("Using raw token for authentication")
     
-    # Remove duplicate "Bearer " prefix if present
+    # Clean up bearer token - remove any existing Bearer prefix to avoid duplication
     if bearer_token.startswith('Bearer '):
         bearer_token = bearer_token[7:]  # Remove "Bearer " prefix
     
     if not bearer_token:
-        print("Error: BEARER_TOKEN environment variable is required")
-        print("Please set BEARER_TOKEN environment variable or configure AWS Secrets Manager")
+        print("Error: No valid bearer token found")
+        print("Please run create_cognito.py to set up authentication")
         sys.exit(1)
     
     encoded_arn = agent_arn.replace(':', '%3A').replace('/', '%2F')
@@ -236,10 +266,10 @@ async def main():
         }
     })
     
-    # Use OAuth (Bearer token only) authentication
+    # Use OAuth (Bearer token only) authentication - Fixed to avoid double Bearer prefix
     print("Using OAuth (Bearer token only) authentication...")
     headers = {
-        "authorization": f"Bearer {bearer_token}",
+        "authorization": f"Bearer {bearer_token}",  # Single Bearer prefix
         "Content-Type": "application/json",
         "Accept": "application/json, text/event-stream"
     }
@@ -264,11 +294,18 @@ async def main():
                 print("✓ 성공!")
                 successful_url = test_url
                 break
-            elif test_response.status_code == 403 and "OAuth authorization failed" not in test_response.text:
-                # OAuth 에러가 아닌 다른 403 에러라면 엔드포인트가 잘못된 것일 수 있음
+            elif test_response.status_code == 403:
+                # Check if it's an OAuth error or endpoint error
+                if "OAuth authorization failed" in test_response.text:
+                    print("⚠ OAuth 인증 실패 - 토큰 문제일 수 있음")
+                elif "Failed to parse token" in test_response.text:
+                    print("⚠ 토큰 파싱 실패 - 토큰 형식 문제일 수 있음")
+                else:
+                    print("⚠ 권한 없음 - 다른 엔드포인트 시도")
                 continue
             elif test_response.status_code == 404:
                 # 엔드포인트가 존재하지 않음
+                print("⚠ 엔드포인트 없음")
                 continue
             else:
                 print(f"⚠ 에러: {test_response.status_code}")
@@ -279,6 +316,11 @@ async def main():
     
     if not successful_url:
         print("\n모든 엔드포인트에서 인증이 실패했습니다.")
+        print("\n문제 해결 방법:")
+        print("1. create_cognito.py를 다시 실행하여 새로운 토큰 생성")
+        print("2. Cognito User Pool 설정 확인")
+        print("3. Agent Runtime ARN이 올바른지 확인")
+        print("4. AWS 권한 설정 확인")
         return
     
     mcp_url = successful_url
@@ -399,7 +441,7 @@ async def main():
         print_exception_details(e)
         
         print("\nTroubleshooting tips:")
-        print("1. Ensure BEARER_TOKEN environment variable is set")
+        print("1. Run create_cognito.py to refresh authentication tokens")
         print("2. Check if the agent runtime ARN is correct")
         print("3. Verify you have permissions to access this agent runtime")
         print("4. Check if the agent runtime is active and running")
