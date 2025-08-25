@@ -21,7 +21,7 @@ MCP runtime을 생성합니다.
 python create_mcp_runtime.py
 ```
 
-배포가 정상적이 되었는지 아래와 같이 확인할 수 있습니다.
+배포가 정상적으로 되었는지 아래와 같이 확인할 수 있습니다.
 
 ```text
 python test_mcp_remote.py
