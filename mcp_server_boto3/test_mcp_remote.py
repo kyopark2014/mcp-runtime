@@ -22,7 +22,7 @@ config = load_config()
 projectName = config['projectName']
 region = config['region']
 
-def get_cognito_bearer_token(config):
+def create_cognito_bearer_token(config):
     """Get a fresh bearer token from Cognito"""
     try:
         cognito_config = config['cognito']
@@ -53,7 +53,7 @@ def get_cognito_bearer_token(config):
         
     except Exception as e:
         print(f"Error getting Cognito token: {e}")
-        return None, None
+        return None
 
 def get_bearer_token():
     try:
@@ -123,7 +123,7 @@ async def main():
     if not bearer_token:    
         # Try to get fresh bearer token from Cognito
         print("No bearer token found in secret manager, getting fresh bearer token from Cognito...")
-        bearer_token = get_cognito_bearer_token(config)
+        bearer_token = create_cognito_bearer_token(config)
         print(f"Bearer token from cognito: {bearer_token}")
         
         save_bearer_token(bearer_token)
