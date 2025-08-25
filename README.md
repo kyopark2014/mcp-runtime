@@ -1,6 +1,33 @@
 # MCP Tool - AWS USE
 
-## How to use
+
+## Deployment
+
+아래와 같이 IAM policy를 생성합니다. 생성된 policy의 이름은 BedrockAgentCoreMCPRoleFor에 project name을 합한 형태입니다.
+
+```text
+python create_iam_policies.py
+```
+
+MCP server 인증시 사용할 bearer token을 등록합니다. 여기서는 Cognito의 access token으로 bearer token을 생성하고 secret manager에 등록합니다.
+
+```text
+python create_bearer_token.py
+```
+
+MCP runtime을 생성합니다.
+
+```text
+python create_mcp_runtime.py
+```
+
+배포가 정상적이 되었는지 아래와 같이 확인할 수 있습니다.
+
+```text
+python test_mcp_remote.py
+```
+
+## Local Test
 
 MCP 서버는 아래와 같이 실행합니다.
 
