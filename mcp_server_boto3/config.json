@@ -1,22 +1,20 @@
 {
-  "projectName": "agentcore",
-  "region": "us-west-2",
-  "accountId": "262976740991",
-  "agent_runtime_role": "arn:aws:iam::262976740991:role/BedrockAgentCoreMCPRole",
-  "agent_runtime_role_name": "BedrockAgentCoreMCPRole",
-  "agentcore_memory_role": "arn:aws:iam::262976740991:role/role-agentcore-memory-for-agentcore-us-west-2",
-  "agent_runtime_arn": "arn:aws:bedrock-agentcore:us-west-2:262976740991:runtime/agentcore_mcp_server_boto3-IEHlZT2alY",
-  "cognito": {
-    "discovery_url": "https://cognito-idp.us-west-2.amazonaws.com/us-west-2_yvrE9iJpM/.well-known/openid-configuration",
-    "policy_name": "MCPServerAuthPolicy",
-    "identity_pool_id": "us-west-2:90163921-ab57-4991-ac89-4c7a0a00b2c2",
-    "identity_pool_name": "mcp-agentcore-identity-pool",
-    "user_pool_id": "us-west-2_yvrE9iJpM",
-    "user_pool_name": "mcp-agentcore-user-pool",
-    "client_id": "jmi8qatnt3c0rjau0l5om7h4n",
-    "client_name": "mcp-agentcore-client",
+    "projectName": "McpServer",
     "region": "us-west-2",
-    "test_username": "mcp-test-user@example.com",
-    "test_password": "TestPassword123!"
-  }
+    "accountId": "262976740991",
+    "agent_runtime_role": "arn:aws:iam::262976740991:role/BedrockAgentCoreMCPRoleForMcpServer",
+    "agent_runtime_arn": "arn:aws:bedrock-agentcore:us-west-2:262976740991:runtime/mcpserver_mcp_server_boto3-9SKDLXBDcF",
+    "cognito": {
+        "discovery_url": "https://cognito-idp.us-west-2.amazonaws.com/us-west-2_xXojNPDue/.well-known/openid-configuration",
+        "policy_name": "MCPServerAuthPolicy",
+        "identity_pool_id": "us-west-2:90163921-ab57-4991-ac89-4c7a0a00b2c2",
+        "identity_pool_name": "mcp-agentcore-identity-pool",
+        "user_pool_id": "us-west-2_xXojNPDue",
+        "user_pool_name": "mcp-agentcore-user-pool",
+        "client_id": "7tj4i1k2m15hvi5bca7s9kdhcs",
+        "client_name": "mcp-agentcore-client",
+        "region": "us-west-2",
+        "test_username": "mcp-test-user@example.com",
+        "test_password": "TestPassword123!"
+    }
 }

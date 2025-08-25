@@ -8,7 +8,7 @@ TIMESTAMP=$(date +%Y%m%d%H%M%S)
 if [ -f "config.json" ]; then
     AWS_ACCOUNT_ID=$(python3 -c "import json; print(json.load(open('config.json'))['accountId'])")
     AWS_REGION=$(python3 -c "import json; print(json.load(open('config.json'))['region'])")
-    ECR_REPOSITORY=$(python3 -c "import json; print(json.load(open('config.json'))['projectName'])")
+    ECR_REPOSITORY=$(python3 -c "import json; print(json.load(open('config.json'))['projectName'].lower())")
 
     CURRENT_FOLDER_NAME=$(basename $(pwd))
     echo "CURRENT_FOLDER_NAME: ${CURRENT_FOLDER_NAME}"

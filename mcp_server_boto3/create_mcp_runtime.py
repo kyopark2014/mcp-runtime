@@ -24,7 +24,7 @@ current_folder_name = os.path.basename(os.path.dirname(os.path.abspath(__file__)
 target = current_folder_name.split('/')[-1]
 print(f"target: {target}")
 
-repositoryName = projectName.replace('-', '_')+'_'+target
+repositoryName = projectName.lower().replace('-', '_')+'_'+target
 print(f"repositoryName: {repositoryName}")
 
 # get lagtest image

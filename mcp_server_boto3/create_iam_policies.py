@@ -14,26 +14,16 @@ def load_config():
     return config
 
 config = load_config()
+region = config['region']
 accountId = config['accountId']
-agent_runtime_role_name = config['agent_runtime_role_name']
-
-def get_current_role_arn():
-    """Get the ARN of the currently used IAM role"""
-    try:
-        sts_client = boto3.client('sts')
-        identity = sts_client.get_caller_identity()
-        print(f"Current account: {identity['Account']}")
-        print(f"Current user/role: {identity['Arn']}")
-        return identity['Arn']
-    except Exception as e:
-        print(f"Failed to get current role information: {e}")
-        return None
+projectName = config['projectName']
+agent_runtime_role_name = "BedrockAgentCoreMCPRole"+"For"+projectName
 
 def create_bedrock_agentcore_policy():
     """Create IAM policy for Bedrock AgentCore MCP access"""
     
     policy_name = agent_runtime_role_name
-    policy_description = "Policy for accessing Bedrock AgentCore MCP endpoints"
+    policy_description = f"Policy for accessing Bedrock AgentCore MCP endpoints"
     
     # Comprehensive policy document for Bedrock AgentCore MCP access
     policy_document = {
@@ -54,10 +44,11 @@ def create_bedrock_agentcore_policy():
                 "Effect": "Allow",
                 "Action": [
                     "secretsmanager:GetSecretValue",
-                    "secretsmanager:DescribeSecret"
+                    "secretsmanager:DescribeSecret",
+                    "secretsmanager:UpdateSecret"
                 ],
                 "Resource": [
-                    "arn:aws:secretsmanager:us-west-2:*:secret:mcp_server/cognito/credentials*"
+                    f"arn:aws:secretsmanager:{region}:*:secret:{projectName}/cognito/credentials*"
                 ]
             },
             {
@@ -92,8 +83,8 @@ def create_bedrock_agentcore_policy():
                     "logs:DescribeLogStreams"
                 ],
                 "Resource": [
-                    "arn:aws:logs:us-west-2:*:log-group:/aws/bedrock-agentcore/*",
-                    "arn:aws:logs:us-west-2:*:log-group:/aws/bedrock-agentcore/*:log-stream:*"
+                    f"arn:aws:logs:{region}:*:log-group:/aws/bedrock-agentcore/*",
+                    f"arn:aws:logs:{region}:*:log-group:/aws/bedrock-agentcore/*:log-stream:*"
                 ]
             }
         ]
@@ -213,7 +204,7 @@ def create_trust_policy_for_bedrock():
 def create_bedrock_agentcore_role():
     """Create IAM role for Bedrock AgentCore MCP access"""
     
-    role_name = "BedrockAgentCoreMCPRole"
+    role_name = "BedrockAgentCoreMCPRole"+"For"+projectName
     policy_arn = create_bedrock_agentcore_policy()
     
     if not policy_arn:
@@ -261,7 +252,7 @@ def create_bedrock_agentcore_role():
         print(f"Role creation failed: {e}")
         return None
 
-def update_agentcore_config():
+def update_agentcore_config(role_arn):
     """Update AgentCore configuration"""
     
     config_file = "config.json"
@@ -270,15 +261,12 @@ def update_agentcore_config():
         with open(config_file, "r") as f:
             config = json.load(f)
         
-        # Set new IAM role ARN
-        role_arn = create_bedrock_agentcore_role()
-        if role_arn:
-            config['agent_runtime_role'] = role_arn
-            print(f"✓ AgentCore configuration updated: {role_arn}")
+        config['agent_runtime_role'] = role_arn
+        print(f"✓ AgentCore configuration updated: {role_arn}")
         
         # Save configuration file
         with open(config_file, "w") as f:
-            json.dump(config, f, indent=2)
+            json.dump(config, f, indent=2)  
         
         print(f"✓ Configuration file updated: {config_file}")
         
@@ -287,163 +275,20 @@ def update_agentcore_config():
     except Exception as e:
         print(f"Configuration update failed: {e}")
 
-# Alternative Policy Definitions (for reference and testing)
-def get_updated_policy():
-    """Get updated policy with workload identity support"""
-    return {
-        "Version": "2012-10-17",
-        "Statement": [
-            {
-                "Sid": "BedrockAgentAccess",
-                "Effect": "Allow",
-                "Action": [
-                    "bedrock-agentcore:*"
-                ],
-                "Resource": "*"
-            },
-            {
-                "Sid": "SecretsManagerAccess",
-                "Effect": "Allow",
-                "Action": [
-                    "secretsmanager:GetSecretValue",
-                    "secretsmanager:DescribeSecret"
-                ],
-                "Resource": [
-                    "arn:aws:secretsmanager:us-west-2:*:secret:mcp_server/cognito/credentials*"
-                ]
-            },
-            {
-                "Sid": "CognitoAccess",
-                "Effect": "Allow",
-                "Action": [
-                    "cognito-idp:*"
-                ],
-                "Resource": "*"
-            }
-        ]
-    }
-
-def get_permissive_policy():
-    """Get permissive policy with wildcard resources"""
-    return {
-        "Version": "2012-10-17",
-        "Statement": [
-            {
-                "Sid": "BedrockAgentAccess",
-                "Effect": "Allow",
-                "Action": [
-                    "bedrock-agentcore:*"
-                ],
-                "Resource": "*"
-            },
-            {
-                "Sid": "SecretsManagerAccess",
-                "Effect": "Allow",
-                "Action": [
-                    "secretsmanager:GetSecretValue",
-                    "secretsmanager:DescribeSecret"
-                ],
-                "Resource": [
-                    "arn:aws:secretsmanager:us-west-2:*:secret:mcp_server/cognito/credentials*"
-                ]
-            },
-            {
-                "Sid": "CognitoAccess",
-                "Effect": "Allow",
-                "Action": [
-                    "cognito-idp:*"
-                ],
-                "Resource": "*"
-            }
-        ]
-    }
-
-def create_policy_from_json(policy_name, policy_document, description=None):
-    """Create IAM policy from JSON document"""
-    
-    if description is None:
-        description = f"Policy for {policy_name}"
-    
-    try:
-        iam_client = boto3.client('iam')
-        
-        # Check if policy already exists
-        try:
-            existing_policy = iam_client.get_policy(PolicyArn=f"arn:aws:iam::{accountId}:policy/{policy_name}")
-            print(f"Existing policy found: {existing_policy['Policy']['Arn']}")
-            
-            # Create policy version
-            response = iam_client.create_policy_version(
-                PolicyArn=existing_policy['Policy']['Arn'],
-                PolicyDocument=json.dumps(policy_document),
-                SetAsDefault=True
-            )
-            print(f"✓ Policy update completed: {response['PolicyVersion']['VersionId']}")
-            return existing_policy['Policy']['Arn']
-            
-        except iam_client.exceptions.NoSuchEntityException:
-            # Create new policy
-            response = iam_client.create_policy(
-                PolicyName=policy_name,
-                PolicyDocument=json.dumps(policy_document),
-                Description=description
-            )
-            print(f"✓ New policy created: {response['Policy']['Arn']}")
-            return response['Policy']['Arn']
-            
-    except Exception as e:
-        print(f"Policy creation failed: {e}")
-        return None
-
-def create_updated_policy():
-    """Create updated policy for Bedrock AgentCore MCP access"""
-    return create_policy_from_json(
-        f"{agent_runtime_role_name}_updated",
-        get_updated_policy(),
-        "Updated policy for accessing Bedrock AgentCore MCP endpoints with workload identity"
-    )
-
-def create_permissive_policy():
-    """Create permissive policy for Bedrock AgentCore MCP access"""
-    return create_policy_from_json(
-        f"{agent_runtime_role_name}_permissive",
-        get_permissive_policy(),
-        "Permissive policy for accessing Bedrock AgentCore MCP endpoints"
-    )
-
-def list_available_policies():
-    """List all available policy types"""
-    policies = {
-        "comprehensive": "Comprehensive policy with all permissions (default)",
-        "updated": "Updated policy with workload identity support",
-        "permissive": "Permissive policy with wildcard resources"
-    }
-    
-    print("Available policy types:")
-    for key, description in policies.items():
-        print(f"  - {key}: {description}")
-    
-    return policies
-
-
 def main():
     print("=== AWS Bedrock AgentCore IAM Setup ===\n")
     
-    # Check current role information
-    print("1. Checking current IAM information...")
-    current_role = get_current_role_arn()
-    
     # Create Bedrock AgentCore policy
-    print("\n2. Creating Bedrock AgentCore policy...")
+    print("\n1. Creating Bedrock AgentCore policy...")
     policy_arn = create_bedrock_agentcore_policy()
     
     # Create Bedrock AgentCore role
-    print("\n3. Creating Bedrock AgentCore role...")
+    print("\n2. Creating Bedrock AgentCore role...")
     role_arn = create_bedrock_agentcore_role()
     
     # Update AgentCore configuration
-    print("\n4. Updating AgentCore configuration...")
-    update_agentcore_config()
+    print("\n3. Updating AgentCore configuration...")
+    update_agentcore_config(role_arn)
     
     print("\n=== Setup Complete ===")
     if role_arn:

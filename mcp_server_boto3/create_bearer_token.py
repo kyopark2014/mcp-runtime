@@ -84,34 +84,7 @@ def create_test_user():
     except Exception as e:
         print(f"Error creating test user: {e}")
         return False
-
-def list_users():
-    """List all users in the User Pool"""
-    try:
-        user_pool_id = config['cognito']['user_pool_id']
-        region = config['region']
-        
-        print(f"Listing users in User Pool: {user_pool_id}")
-        
-        cognito_idp_client = boto3.client('cognito-idp', region_name=region)
-        
-        response = cognito_idp_client.list_users(
-            UserPoolId=user_pool_id
-        )
-        
-        print(f"\nFound {len(response['Users'])} users:")
-        for user in response['Users']:
-            username = user['Username']
-            status = user['UserStatus']
-            created = user['UserCreateDate']
-            print(f"  - {username} (Status: {status}, Created: {created})")
-        
-        return True
-        
-    except Exception as e:
-        print(f"Error listing users: {e}")
-        return False
-    
+   
 def create_cognito_user_pool():
     """Creates Cognito User Pool for MCP authentication"""    
     pool_name = config['cognito']['user_pool_name']
@@ -177,7 +150,7 @@ def create_cognito_user_pool():
                         
                     except Exception as e:
                         print(f"Failed to check/create client for existing User Pool: {e}")
-                        return None
+                        return None, None
         except Exception as e:
             print(f"Failed to check User Pool list: {e}")
         
@@ -234,7 +207,7 @@ def create_cognito_user_pool():
         
     except Exception as e:
         print(f"Failed to create Cognito User Pool: {e}")
-        return None
+        return None, None
 
 def create_cognito_identity_pool(user_pool_id):
     """Creates Cognito Identity Pool and fixes App Client authentication flows"""    
@@ -364,95 +337,6 @@ def update_agentcore_config_with_cognito(user_pool_id, identity_pool_id, client_
     
     print(f"AgentCore configuration updated successfully: {config_file}")
     
-def create_mcp_auth_policy(policy_name: str):
-    """Creates additional IAM policy for MCP authentication"""
-        
-    policy_document = {
-        "Version": "2012-10-17",
-        "Statement": [
-            {
-                "Sid": "MCPServerAuthentication",
-                "Effect": "Allow",
-                "Action": [
-                    "cognito-idp:AdminInitiateAuth",
-                    "cognito-idp:AdminRespondToAuthChallenge",
-                    "cognito-idp:GetUser",
-                    "cognito-idp:GetUserPool",
-                    "cognito-identity:GetId",
-                    "cognito-identity:GetCredentialsForIdentity",
-                    "sts:AssumeRoleWithWebIdentity"
-                ],
-                "Resource": "*"
-            },
-            {
-                "Sid": "MCPServerSecretsAccess",
-                "Effect": "Allow",
-                "Action": [
-                    "secretsmanager:GetSecretValue",
-                    "secretsmanager:CreateSecret",
-                    "secretsmanager:UpdateSecret"
-                ],
-                "Resource": [
-                    f"arn:aws:secretsmanager:{config['region']}:*:secret:mcp_server/*"
-                ]
-            }
-        ]
-    }
-    
-    try:
-        iam_client = boto3.client('iam')
-        
-        # Check existing policy
-        try:
-            existing_policy = iam_client.get_policy(PolicyArn=f"arn:aws:iam::{accountId}:policy/{policy_name}")
-            print(f"Existing MCP authentication policy found: {existing_policy['Policy']['Arn']}")
-            return existing_policy['Policy']['Arn']
-        except iam_client.exceptions.NoSuchEntityException:
-            pass
-        
-        # Create new policy
-        response = iam_client.create_policy(
-            PolicyName=policy_name,
-            PolicyDocument=json.dumps(policy_document),
-            Description="Policy for MCP server authentication"
-        )
-        
-        policy_arn = response['Policy']['Arn']
-        print(f"✓ MCP authentication policy created successfully: {policy_arn}")
-        
-        return policy_arn
-        
-    except Exception as e:
-        print(f"Failed to create MCP authentication policy: {e}")
-        return None
-
-def update_bedrock_agentcore_role():
-    """Adds MCP authentication policy to Bedrock AgentCore role"""
-        
-    policy_name = config['cognito']['policy_name']    
-    policy_arn = create_mcp_auth_policy(policy_name)
-    
-    if not policy_arn:
-        print("Failed to create MCP authentication policy")
-        return False
-    
-    role_name = config['agent_runtime_role'].split('/')[-1]    
-    try:
-        iam_client = boto3.client('iam')
-        
-        # Attach policy to role
-        response = iam_client.attach_role_policy(
-            RoleName=role_name,
-            PolicyArn=policy_arn
-        )
-        
-        print(f"MCP authentication policy attached successfully: {policy_arn}")
-        return True
-        
-    except Exception as e:
-        print(f"Failed to attach policy: {e}")
-        return False
-
 def create_cognito_bearer_token(config):
     """Get a fresh bearer token from Cognito"""
     try:
@@ -488,7 +372,7 @@ def create_cognito_bearer_token(config):
 
 def save_bearer_token(bearer_token):
     try:
-        secret_name = f'{config["projectName"]}/cognito/credentials'
+        secret_name = f'{config["projectName"].lower()}/cognito/credentials'
 
         session = boto3.Session()
         client = session.client('secretsmanager', region_name=region)
@@ -527,12 +411,7 @@ def main():
     
     # 1. Create Cognito User Pool
     print("1. Creating Cognito User Pool...")
-    result = create_cognito_user_pool()
-    if result:
-        user_pool_id, client_id = result
-    else:
-        user_pool_id = None
-        client_id = None
+    user_pool_id, client_id = create_cognito_user_pool()
     
     # 2. Create Cognito Identity Pool
     print("\n2. Creating Cognito Identity Pool...")
@@ -547,21 +426,17 @@ def main():
 
     if user_pool_id and identity_pool_id:
         update_agentcore_config_with_cognito(user_pool_id, identity_pool_id, client_id, discovery_url)
-    
-    # 4. Create and attach MCP authentication policy
-    print("\n4. Setting up MCP authentication policy...")
-    update_bedrock_agentcore_role()
-        
-    # 5. Create test user
-    print("\n5. Creating test user...")
+            
+    # 4. Create test user
+    print("\n4. Creating test user...")
     if user_pool_id:
         response = create_test_user()
         print(f"response of create_test_user: {response}")
             
-        # 6. Create Bearer token
-        print("\n6. Creating Bearer token...")
+        # 5. Create Bearer token
+        print("\n5. Creating Bearer token...")
         bearer_token = create_cognito_bearer_token(config)
-        print(f"tokbearer_tokenen: {bearer_token}")
+        print(f"bearer_tokenen: {bearer_token}")
 
         save_bearer_token(bearer_token)
 
@@ -570,7 +445,6 @@ def main():
     print("✓ App client authentication flows configured")
     print("✓ Test user created")
     print("✓ Bearer token generated and saved")
-    print("✓ MCP authentication policy attached")
     print("\nYou can now use the MCP server with authentication!")
     
 if __name__ == "__main__":

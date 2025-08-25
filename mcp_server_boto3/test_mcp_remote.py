@@ -77,7 +77,7 @@ def get_bearer_token():
 
 def save_bearer_token(bearer_token):
     try:
-        secret_name = f'{config["projectName"]}/cognito/credentials'
+        secret_name = f'{config["projectName"].lower()}/cognito/credentials'
 
         session = boto3.Session()
         client = session.client('secretsmanager', region_name=region)
