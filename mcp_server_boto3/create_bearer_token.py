@@ -18,9 +18,6 @@ def load_config():
         return None
 
 
-
-
-
 def create_test_user():
     """Create a test user in Cognito User Pool"""
     try:
