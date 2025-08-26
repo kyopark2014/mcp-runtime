@@ -119,8 +119,8 @@ async def main():
     
     # Check basic AWS connectivity
     bearer_token = get_bearer_token()
-    # print(f"Bearer token from secret manager: {bearer_token[:100] if bearer_token else 'None'}...")
-    print(f"Bearer token from secret manager: {bearer_token}")
+    print(f"Bearer token from secret manager: {bearer_token[:100] if bearer_token else 'None'}...")
+    #print(f"Bearer token from secret manager: {bearer_token}")
 
     if not bearer_token:    
         # Try to get fresh bearer token from Cognito

@@ -76,7 +76,7 @@ with st.sidebar:
 
         # Change radio to checkbox
         mcp_options = [
-            "basic", "use_aws", "사용자 설정"
+            "basic", "use_aws", "kb-retriever (local)", "kb-retriever (remote)", "사용자 설정"
         ]
         mcp_selections = {}
         default_selections = ["basic"]
