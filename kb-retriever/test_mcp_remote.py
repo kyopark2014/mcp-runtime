@@ -111,6 +111,7 @@ def save_bearer_token(bearer_token):
             
     except Exception as e:
         print(f"Error saving bearer token: {e}")
+        # Continue execution even if saving fails
 
 async def main():
     agent_arn = config['agent_runtime_arn']
@@ -118,15 +119,20 @@ async def main():
     
     # Check basic AWS connectivity
     bearer_token = get_bearer_token()
+    # print(f"Bearer token from secret manager: {bearer_token[:100] if bearer_token else 'None'}...")
     print(f"Bearer token from secret manager: {bearer_token}")
 
     if not bearer_token:    
         # Try to get fresh bearer token from Cognito
         print("No bearer token found in secret manager, getting fresh bearer token from Cognito...")
         bearer_token = create_cognito_bearer_token(config)
-        print(f"Bearer token from cognito: {bearer_token}")
+        print(f"Bearer token from cognito: {bearer_token[:100] if bearer_token else 'None'}...")
         
-        save_bearer_token(bearer_token)
+        if bearer_token:
+            save_bearer_token(bearer_token)
+        else:
+            print("Failed to get bearer token from Cognito. Exiting.")
+            return
                 
     encoded_arn = agent_arn.replace(':', '%3A').replace('/', '%2F')
     
@@ -170,9 +176,18 @@ async def main():
             successful_url = mcp_url
             successful_headers = headers            
         else:
-            print(f"Error: {response.status_code}")            
+            print(f"Error: {response.status_code}")
+            print(f"Response body: {response.text}")
+            if response.status_code == 403:
+                print("403 Forbidden - Check IAM permissions and bearer token validity")
+            return
     except Exception as e:
         print(f"Connection failed: {e}")
+        return
+
+    if not successful_url or not successful_headers:
+        print("Failed to establish successful connection. Exiting.")
+        return
 
     mcp_url = successful_url
     headers = successful_headers
@@ -196,49 +211,61 @@ async def main():
                 
                 # Add timeout for initialize
                 try:
-                    await asyncio.wait_for(session.initialize(), timeout=30)
+                    await asyncio.wait_for(session.initialize(), timeout=60)
                     print("6. session.initialize() successful!")
                 except asyncio.TimeoutError:
-                    print("session.initialize() timeout (30s)")
+                    print("session.initialize() timeout (60s)")
                     return
                 except Exception as init_error:
                     print(f"session.initialize() failed: {init_error}")
+                    print(f"Error type: {type(init_error)}")
                     return
                 
                 print("7. Calling session.list_tools()...")
                 
                 # Add timeout for list_tools
                 try:
-                    tool_result = await asyncio.wait_for(session.list_tools(), timeout=30)
+                    tool_result = await asyncio.wait_for(session.list_tools(), timeout=60)
                     print(f"8. session.list_tools() successful!")
                     print(f"\nAvailable tools: {len(tool_result.tools)}")
                     for tool in tool_result.tools:
                         print(f"  - {tool.name}: {tool.description[:100]}...")
                 except asyncio.TimeoutError:
-                    print("session.list_tools() timeout (30s)")
+                    print("session.list_tools() timeout (60s)")
                     return
                 except Exception as tools_error:
                     print(f"session.list_tools() failed: {tools_error}")
+                    print(f"Error type: {type(tools_error)}")
                     return
                                 
                 # Test retrieve function
-                print("\n=== Testing multiply_numbers function ===")
+                print("\n=== Testing retrieve function ===")
                 params = {
                     "keyword": "보일러 에러 코드"
                 }
                 
-                result = await session.call_tool("retrieve", params)
-                print(f"retrieve result: {result}")
-                
-                if hasattr(result, 'content') and result.content:
-                    for content in result.content:
-                        if hasattr(content, 'text'):
-                            print(f"Content: {content.text}")
+                try:
+                    result = await asyncio.wait_for(session.call_tool("retrieve", params), timeout=30)
+                    print(f"retrieve result: {result}")
+                    
+                    if hasattr(result, 'content') and result.content:
+                        for content in result.content:
+                            if hasattr(content, 'text'):
+                                print(f"Content: {content.text}")
+                    else:
+                        print("No content in result")
+                except asyncio.TimeoutError:
+                    print("retrieve function timeout (30s)")
+                except Exception as retrieve_error:
+                    print(f"retrieve function failed: {retrieve_error}")
                                 
                 print("\n=== MCP Connection Test Complete ===")
                 
     except Exception as e:
         print(f"MCP connection failed: {e}")
+        print(f"Error type: {type(e)}")
+        import traceback
+        traceback.print_exc()
         
 if __name__ == "__main__":
     asyncio.run(main())

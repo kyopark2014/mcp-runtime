@@ -24,7 +24,7 @@ current_folder_name = os.path.basename(os.path.dirname(os.path.abspath(__file__)
 target = current_folder_name.split('/')[-1]
 print(f"target: {target}")
 
-repositoryName = projectName+'_'+target
+repositoryName = (projectName+'_'+target).lower()
 print(f"repositoryName: {repositoryName}")
 
 # get lagtest image
@@ -125,7 +125,7 @@ def update_agent_runtime():
         description="Update agent runtime",
         agentRuntimeArtifact={
             'containerConfiguration': {
-                'containerUri': f"{accountId}.dkr.ecr.{aws_region}.amazonaws.com/{targetAgentRuntime}:{imageTags}"
+                'containerUri': f"{accountId}.dkr.ecr.{aws_region}.amazonaws.com/{repositoryName}:{imageTags}"
             }
         },
         roleArn=agent_runtime_role,
