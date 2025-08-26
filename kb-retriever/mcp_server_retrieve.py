@@ -20,7 +20,10 @@ try:
             "You are a helpful assistant. "
             "You retrieve documents in RAG."
         ),
+        host="0.0.0.0",
+        stateless_http=True
     )
+    
     logger.info("MCP server initialized successfully")
 except Exception as e:
         err_msg = f"Error: {str(e)}"
@@ -38,7 +41,14 @@ def retrieve(keyword: str) -> str:
     """
     logger.info(f"search --> keyword: {keyword}")
 
-    return mcp_retrieve.retrieve(keyword)
+    try:
+        result = mcp_retrieve.retrieve(keyword)
+        logger.info(f"result: {result}")
+        
+        return result
+    except Exception as e:
+        logger.error(f"Error in retrieve function: {e}")
+        return f"Error retrieving data: {str(e)}"
 
 if __name__ =="__main__":
     print(f"###### main ######")

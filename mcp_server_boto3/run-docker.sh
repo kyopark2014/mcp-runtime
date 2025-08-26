@@ -37,7 +37,7 @@ echo "🔍 OpenTelemetry disabled for local development"
 echo ""
 echo "🚀 Starting Docker container..."
 sudo docker run -d \
-    --platform linux/amd64 \
+    --platform linux/arm64 \
     --name ${DOCKER_NAME}-container \
     -p 8000:8000 \
     -e OTEL_TRACES_SAMPLER=always_off \

@@ -86,6 +86,15 @@ def create_bedrock_agentcore_policy():
                     f"arn:aws:logs:{region}:*:log-group:/aws/bedrock-agentcore/*",
                     f"arn:aws:logs:{region}:*:log-group:/aws/bedrock-agentcore/*:log-stream:*"
                 ]
+            },
+            {
+                "Sid": "S3Access",
+                "Effect": "Allow",
+                "Action": [
+                    "s3:*",
+                    "bedrock:*"
+                ],
+                "Resource": "*"
             }
         ]
     }

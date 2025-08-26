@@ -65,5 +65,5 @@ EXPOSE 8000
 
 COPY . .
 
-CMD ["python", "mcp_server_retrieve.py", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["python", "mcp_server_retrieve.py"]
 

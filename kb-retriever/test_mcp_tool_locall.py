@@ -43,6 +43,9 @@ async def test_mcp_tools():
     except Exception as e:
         print(f"Error testing MCP server: {e}")
         print(f"Error type: {type(e).__name__}")
+        import traceback
+        print(f"Full traceback:")
+        traceback.print_exc()
 
 if __name__ == "__main__":
     asyncio.run(test_mcp_tools())

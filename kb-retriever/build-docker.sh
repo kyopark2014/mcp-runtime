@@ -29,7 +29,7 @@ fi
 echo ""
 echo "🔨 Building Docker image with ARG credentials..."
 sudo docker build \
-    --platform linux/amd64 \
+    --platform linux/arm64 \
     --build-arg AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
     --build-arg AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
     --build-arg AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:-us-east-1}" \
