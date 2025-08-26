@@ -1,4 +1,4 @@
-# MCP Tool Deployment Using AgentCore
+# MCP Tool Deployment
 
 
 ## Deployment
@@ -78,6 +78,14 @@ agentcore launch
 # Invoke your deployed agent
 agentcore invoke '{"prompt": "Hello from Bedrock AgentCore!"}'
 ```
+
+## 실행 결과
+
+왼쪽 메뉴의 MCP Config에서 "kb-retriever (remote)"을 선택한 후에 "보일러 에러 코드?"로 입력하면, Streamable HTTP를 지원하는 knowledge base MCP에 접속하여 관련된 문서를 아래와 같이 가져와서 답변할 수 있습니다.
+
+<img width="1292" height="759" alt="image" src="https://github.com/user-attachments/assets/a58b5e92-a478-4120-b5ce-3f2116f662ca" />
+
+
 
 ## Reference 
 
