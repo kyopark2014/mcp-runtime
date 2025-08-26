@@ -27,6 +27,11 @@ python create_mcp_runtime.py
 python test_mcp_remote.py
 ```
 
+이때의 결과는 아래와 같습니다.
+
+<img width="600" alt="noname" src="https://github.com/user-attachments/assets/5bc2ce14-5ad5-43b2-a6f4-2a359b76bfe4" />
+
+
 ## Local Test
 
 MCP 서버는 아래와 같이 실행합니다.
