@@ -53,7 +53,7 @@ WORKDIR /app
 RUN pip install --upgrade boto3 botocore
 RUN pip install mcp==1.12.1 langchain-mcp-adapters==0.1.9
 RUN pip install uv
-RUN pip install aws-opentelemetry-distro>=0.10.0
+# RUN pip install aws-opentelemetry-distro>=0.10.0
 
 # install package for use_aws
 RUN pip install rich colorama
@@ -66,4 +66,5 @@ EXPOSE 8000
 
 COPY . .
 
-CMD ["opentelemetry-instrument", "python", "-m", "mcp_retrieve"]
+CMD ["python", "mcp_server_retrieve.py", "--host", "0.0.0.0", "--port", "8000"]
+

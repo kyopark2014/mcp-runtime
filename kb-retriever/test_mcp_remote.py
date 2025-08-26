@@ -221,50 +221,20 @@ async def main():
                     print(f"session.list_tools() failed: {tools_error}")
                     return
                                 
-                # Test add_numbers function
-                print("\n=== Testing add_numbers function ===")
+                # Test retrieve function
+                print("\n=== Testing multiply_numbers function ===")
                 params = {
-                    "a": 15,
-                    "b": 3
+                    "keyword": "보일러 에러 코드"
                 }
                 
-                result = await session.call_tool("add_numbers", params)
-                print(f"Add result: {result}")
+                result = await session.call_tool("retrieve", params)
+                print(f"retrieve result: {result}")
                 
                 if hasattr(result, 'content') and result.content:
                     for content in result.content:
                         if hasattr(content, 'text'):
                             print(f"Content: {content.text}")
-                
-                # Test multiply_numbers function
-                print("\n=== Testing multiply_numbers function ===")
-                multiply_params = {
-                    "a": 4,
-                    "b": 7
-                }
-                
-                multiply_result = await session.call_tool("multiply_numbers", multiply_params)
-                print(f"Multiply result: {multiply_result}")
-                
-                if hasattr(multiply_result, 'content') and multiply_result.content:
-                    for content in multiply_result.content:
-                        if hasattr(content, 'text'):
-                            print(f"Content: {content.text}")
-                
-                # Test greet_user function
-                print("\n=== Testing greet_user function ===")
-                greet_params = {
-                    "name": "World"
-                }
-                
-                greet_result = await session.call_tool("greet_user", greet_params)
-                print(f"Greet result: {greet_result}")
-                
-                if hasattr(greet_result, 'content') and greet_result.content:
-                    for content in greet_result.content:
-                        if hasattr(content, 'text'):
-                            print(f"Content: {content.text}")
-                
+                                
                 print("\n=== MCP Connection Test Complete ===")
                 
     except Exception as e:
