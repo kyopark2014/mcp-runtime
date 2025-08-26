@@ -3,7 +3,6 @@ import logging
 import sys
 import os
 import json
-from urllib import parse
 
 logging.basicConfig(
     level=logging.INFO,  # Default to INFO level

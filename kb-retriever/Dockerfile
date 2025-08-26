@@ -51,8 +51,7 @@ RUN echo "[default]" > /root/.aws/config && \
 WORKDIR /app
 
 RUN pip install --upgrade boto3 botocore
-RUN pip install mcp==1.12.1 langchain-mcp-adapters==0.1.9
-RUN pip install uv
+RUN pip install mcp langchain-mcp-adapters uv
 # RUN pip install aws-opentelemetry-distro>=0.10.0
 
 # install package for use_aws
