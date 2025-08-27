@@ -15,7 +15,13 @@ MCP server 인증시 사용할 bearer token을 등록합니다. 여기서는 Cog
 python create_bearer_token.py
 ```
 
-MCP runtime을 생성합니다.
+MCP runtime을 생성하기 위해 ECR에 이미지를 푸쉬합니다.
+
+```text
+./push-to-ecr.sh
+```
+
+이제 AgentCore에 MCP runtime을 생성합니다.
 
 ```text
 python create_mcp_runtime.py
