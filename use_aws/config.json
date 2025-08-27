@@ -1,22 +1,23 @@
 {
-  "projectName": "agentcore",
+  "projectName": "mcp",
   "region": "us-west-2",
   "accountId": "262976740991",
-  "agent_runtime_role": "arn:aws:iam::262976740991:role/BedrockAgentCoreMCPRole",
+  "agent_runtime_role": "arn:aws:iam::262976740991:role/BedrockAgentCoreMCPRoleFormcp",
   "agent_runtime_role_name": "BedrockAgentCoreMCPRole",
   "agentcore_memory_role": "arn:aws:iam::262976740991:role/role-agentcore-memory-for-agentcore-us-west-2",
-  "agent_runtime_arn": "arn:aws:bedrock-agentcore:us-west-2:262976740991:runtime/agentcore_use_aws-7bQrew43wW",
+  "agent_runtime_arn": "arn:aws:bedrock-agentcore:us-west-2:262976740991:runtime/mcp_use_aws-7VJq6Z6QoO",
   "cognito": {
-    "discovery_url": "https://cognito-idp.us-west-2.amazonaws.com/us-west-2_yvrE9iJpM/.well-known/openid-configuration",
+    "discovery_url": "https://cognito-idp.us-west-2.amazonaws.com/us-west-2_xXojNPDue/.well-known/openid-configuration",
     "policy_name": "MCPServerAuthPolicy",
     "identity_pool_id": "us-west-2:90163921-ab57-4991-ac89-4c7a0a00b2c2",
     "identity_pool_name": "mcp-agentcore-identity-pool",
-    "user_pool_id": "us-west-2_yvrE9iJpM",
+    "user_pool_id": "us-west-2_xXojNPDue",
     "user_pool_name": "mcp-agentcore-user-pool",
-    "client_id": "jmi8qatnt3c0rjau0l5om7h4n",
+    "client_id": "7tj4i1k2m15hvi5bca7s9kdhcs",
     "client_name": "mcp-agentcore-client",
     "region": "us-west-2",
     "test_username": "mcp-test-user@example.com",
     "test_password": "TestPassword123!"
-  }
+  },
+  "secret_name": "mcp/use_aws/credentials"
 }

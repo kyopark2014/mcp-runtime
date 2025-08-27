@@ -24,11 +24,13 @@ logger = logging.getLogger("mcp-server-use-aws")
 
 try:
     mcp = FastMCP(
-        name = "tools",
+        name = "mcp-use-aws",
         instructions=(
             "You are a helpful assistant. "
             "You can check the status of Amazon S3 and retrieve insights."
-        )
+        ),
+        host="0.0.0.0",
+        stateless_http=True
     )
     logger.info("MCP server initialized successfully")
 except Exception as e:
