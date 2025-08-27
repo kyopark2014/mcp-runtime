@@ -331,11 +331,12 @@ def update_agentcore_config_with_cognito(user_pool_id, identity_pool_id, client_
         config['cognito']['client_id'] = client_id
     
     # Save configuration file
-    config_file = "config.json"
-    with open(config_file, "w") as f:
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    config_path = os.path.join(script_dir, "config.json")
+    with open(config_path, "w") as f:
         json.dump(config, f, indent=2)
     
-    print(f"AgentCore configuration updated successfully: {config_file}")
+    print(f"AgentCore configuration updated successfully: {config_path}")
     
 def create_cognito_bearer_token(config):
     """Get a fresh bearer token from Cognito"""
@@ -370,10 +371,8 @@ def create_cognito_bearer_token(config):
         print(f"Error getting Cognito token: {e}")
         return None
 
-def save_bearer_token(bearer_token):
-    try:
-        secret_name = f'{config["projectName"].lower()}/cognito/credentials'
-
+def save_bearer_token(secret_name, bearer_token):
+    try:        
         session = boto3.Session()
         client = session.client('secretsmanager', region_name=region)
         
@@ -438,7 +437,26 @@ def main():
         bearer_token = create_cognito_bearer_token(config)
         print(f"bearer_tokenen: {bearer_token}")
 
-        save_bearer_token(bearer_token)
+        # secret of bearer token
+        current_folder_name = os.path.basename(os.path.dirname(os.path.abspath(__file__)))
+        target = current_folder_name.split('/')[-1].lower()
+        print(f"target: {target}")
+
+        secret_name = f'mcp/{target}/credentials'
+        print(f"secret_name: {secret_name}")
+        
+        try:
+            config['secret_name'] = secret_name
+            
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            config_path = os.path.join(script_dir, "config.json")
+            with open(config_path, "w") as f:
+                json.dump(config, f, indent=2)
+            print(f"✓ secret_name updated in config.json: {secret_name}")
+        except Exception as e:
+            print(f"Warning: Failed to update config.json with client_id: {e}")
+
+        save_bearer_token(secret_name, bearer_token)
 
     print("\n=== Setup Summary ===")
     print("✓ Cognito User Pool and Identity Pool created")

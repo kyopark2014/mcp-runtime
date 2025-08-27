@@ -57,7 +57,7 @@ def create_cognito_bearer_token(config):
 
 def get_bearer_token():
     try:
-        secret_name = f'{projectName}/cognito/credentials'
+        secret_name = config['secret_name']
         session = boto3.Session()
         client = session.client('secretsmanager', region_name=region)
         response = client.get_secret_value(SecretId=secret_name)
@@ -75,10 +75,8 @@ def get_bearer_token():
         print(f"Error getting stored token: {e}")
         return None
 
-def save_bearer_token(bearer_token):
-    try:
-        secret_name = f'{config["projectName"].lower()}/cognito/credentials'
-
+def save_bearer_token(secret_name, bearer_token):
+    try:        
         session = boto3.Session()
         client = session.client('secretsmanager', region_name=region)
         
@@ -129,7 +127,8 @@ async def main():
         print(f"Bearer token from cognito: {bearer_token[:100] if bearer_token else 'None'}...")
         
         if bearer_token:
-            save_bearer_token(bearer_token)
+            secret_name = config['secret_name']
+            save_bearer_token(secret_name, bearer_token)
         else:
             print("Failed to get bearer token from Cognito. Exiting.")
             return

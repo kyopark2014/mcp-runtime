@@ -1,6 +1,5 @@
 import logging
 import sys
-import json
 import traceback
 import chat
 import utils
@@ -164,19 +163,6 @@ def buildChatAgentWithHistory(tools):
         store=chat.memorystore
     )
 
-
-# client = MultiServerMCPClient(
-#     {
-#         "weather": {
-#             "transport": "streamable_http",
-#             "url": "http://localhost:8000/mcp",
-#             "headers": {
-#                 "Authorization": "Bearer YOUR_TOKEN",
-#                 "X-Custom-Header": "custom-value"
-#             },
-#         }
-#     }
-# )
 def load_multiple_mcp_server_parameters(mcp_json: dict):
     mcpServers = mcp_json.get("mcpServers")
   
