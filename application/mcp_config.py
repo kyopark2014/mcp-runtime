@@ -96,7 +96,6 @@ def load_config(mcp_type):
             "mcpServers": {
                 "kb-retriever": {
                     "type": "streamable_http",
-                    # "url": "http://127.0.0.1:8000/mcp",
                     "url": f"https://bedrock-agentcore.{region}.amazonaws.com/runtimes/{encoded_arn}/invocations?qualifier=DEFAULT",
                     "headers": {
                         "Authorization": f"Bearer {bearer_token}",

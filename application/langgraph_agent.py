@@ -195,10 +195,10 @@ def load_multiple_mcp_server_parameters(mcp_json: dict):
                 env = config.get("env", {})
                 
                 server_info[server_name] = {
+                    "transport": "stdio",
                     "command": command,
                     "args": args,
-                    "env": env,
-                    "transport": "stdio"
+                    "env": env                    
                 }
     return server_info
 

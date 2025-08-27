@@ -15,6 +15,7 @@ from strands.agent.conversation_manager import SlidingWindowConversationManager
 from strands import Agent
 from strands.tools.mcp import MCPClient
 from mcp import stdio_client, StdioServerParameters
+from mcp.client.streamable_http import streamablehttp_client
 from botocore.config import Config
 from bedrock_agentcore.runtime import BedrockAgentCoreApp
 
@@ -137,12 +138,22 @@ class MCPClientManager:
         self.clients: Dict[str, MCPClient] = {}
         self.client_configs: Dict[str, dict] = {}  # Store client configurations
         
-    def add_client(self, name: str, command: str, args: List[str], env: dict[str, str] = {}) -> None:
+    def add_stdio_client(self, name: str, command: str, args: List[str], env: dict[str, str] = {}) -> None:
         """Add a new MCP client configuration (lazy initialization)"""
         self.client_configs[name] = {
+            "transport": "stdio",
             "command": command,
             "args": args,
             "env": env
+        }
+        logger.info(f"Stored configuration for MCP client: {name}")
+    
+    def add_streamable_client(self, name: str, url: str, headers: dict[str, str] = {}) -> None:
+        """Add a new MCP client configuration (lazy initialization)"""
+        self.client_configs[name] = {
+            "transport": "streamable_http",
+            "url": url,
+            "headers": headers
         }
         logger.info(f"Stored configuration for MCP client: {name}")
     
@@ -157,13 +168,20 @@ class MCPClientManager:
             config = self.client_configs[name]
             logger.info(f"Creating MCP client for {name} with config: {config}")
             try:
-                self.clients[name] = MCPClient(lambda: stdio_client(
-                    StdioServerParameters(
-                        command=config["command"], 
-                        args=config["args"], 
-                        env=config["env"]
-                    )
-                ))
+                if "transport" in config and config["transport"] == "streamable_http":
+                    self.clients[name] = MCPClient(lambda: streamablehttp_client(
+                        url=config["url"], 
+                        headers=config["headers"]
+                    ))
+                else:
+                    self.clients[name] = MCPClient(lambda: stdio_client(
+                        StdioServerParameters(
+                            command=config["command"], 
+                            args=config["args"], 
+                            env=config["env"]
+                        )
+                    ))
+                
                 logger.info(f"Successfully created MCP client: {name}")
             except Exception as e:
                 logger.error(f"Failed to create MCP client {name}: {e}")
@@ -225,20 +243,32 @@ def init_mcp_clients(mcp_servers: list):
         server_key = next(iter(config["mcpServers"]))
         server_config = config["mcpServers"][server_key]
         
-        name = tool  # Use tool name as client name
-        command = server_config["command"]
-        args = server_config["args"]
-        env = server_config.get("env", {})  # Use empty dict if env is not present
-        
-        logger.info(f"Adding MCP client - name: {name}, command: {command}, args: {args}, env: {env}")        
+        if "type" in server_config and server_config["type"] == "streamable_http":
+            name = tool  # Use tool name as client name
+            url = server_config["url"]
+            headers = server_config.get("headers", {})                
+            logger.info(f"Adding MCP client - name: {name}, url: {url}, headers: {headers}")
+                
+            try:                
+                mcp_manager.add_streamable_client(name, url, headers)
+                logger.info(f"Successfully added streamable MCP client for {name}")
+            except Exception as e:
+                logger.error(f"Failed to add streamable MCP client for {name}: {e}")
+                continue            
+        else:
+            name = tool  # Use tool name as client name
+            command = server_config["command"]
+            args = server_config["args"]
+            env = server_config.get("env", {})  # Use empty dict if env is not present            
+            logger.info(f"Adding MCP client - name: {name}, command: {command}, args: {args}, env: {env}")        
 
-        try:
-            mcp_manager.add_client(name, command, args, env)
-            logger.info(f"Successfully added MCP client for {name}")
-        except Exception as e:
-            logger.error(f"Failed to add MCP client for {name}: {e}")
-            continue
-    
+            try:
+                mcp_manager.add_stdio_client(name, command, args, env)
+                logger.info(f"Successfully added MCP client for {name}")
+            except Exception as e:
+                logger.error(f"Failed to add stdio MCP client for {name}: {e}")
+                continue
+                            
 def update_tools(strands_tools: list, mcp_servers: list):
     tools = []
     tool_map = {
