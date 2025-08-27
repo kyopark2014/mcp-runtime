@@ -1,9 +1,9 @@
 {
-    "projectName": "McpServer",
+    "projectName": "mcp",
     "region": "us-west-2",
     "accountId": "262976740991",
-    "agent_runtime_role": "arn:aws:iam::262976740991:role/BedrockAgentCoreMCPRoleForMcpServer",
-    "agent_runtime_arn": "arn:aws:bedrock-agentcore:us-west-2:262976740991:runtime/mcpserver_mcp_server_boto3-9SKDLXBDcF",
+    "agent_runtime_role": "arn:aws:iam::262976740991:role/BedrockAgentCoreMCPRoleFormcp",
+    "agent_runtime_arn": "arn:aws:bedrock-agentcore:us-west-2:262976740991:runtime/mcp_mcp_server_boto3-lRQ6Lc6DoH",
     "cognito": {
         "discovery_url": "https://cognito-idp.us-west-2.amazonaws.com/us-west-2_xXojNPDue/.well-known/openid-configuration",
         "policy_name": "MCPServerAuthPolicy",
@@ -16,5 +16,6 @@
         "region": "us-west-2",
         "test_username": "mcp-test-user@example.com",
         "test_password": "TestPassword123!"
-    }
+    },
+    "secret_name": "mcp/mcp_server_boto3/credentials"
 }

@@ -178,8 +178,38 @@ async def main():
             print(f"Error: {response.status_code}")
             print(f"Response body: {response.text}")
             if response.status_code == 403:
-                print("403 Forbidden - Check IAM permissions and bearer token validity")
-            return
+                print("403 Forbidden - Token may be expired, trying to get fresh token from Cognito...")
+                # Try to get fresh bearer token from Cognito
+                fresh_bearer_token = create_cognito_bearer_token(config)
+                if fresh_bearer_token:
+                    print("Successfully obtained fresh token, updating headers and retrying...")
+                    # Update headers with fresh token
+                    headers["Authorization"] = f"Bearer {fresh_bearer_token}"
+                    # Save the fresh token
+                    secret_name = config['secret_name']
+                    save_bearer_token(secret_name, fresh_bearer_token)
+                    
+                    # Retry the request with fresh token
+                    response = requests.post(
+                        mcp_url,
+                        headers=headers,
+                        data=request_body,
+                        timeout=30
+                    )
+                    
+                    if response.status_code == 200:
+                        print("Success with fresh token!")
+                        successful_url = mcp_url
+                        successful_headers = headers
+                    else:
+                        print(f"Still getting error with fresh token: {response.status_code}")
+                        print(f"Response body: {response.text}")
+                        return
+                else:
+                    print("Failed to get fresh token from Cognito")
+                    return
+            else:
+                return
     except Exception as e:
         print(f"Connection failed: {e}")
         return

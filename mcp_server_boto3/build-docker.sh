@@ -13,7 +13,7 @@ AWS_SESSION_TOKEN=$(aws configure get aws_session_token)
 echo "   Region: ${AWS_DEFAULT_REGION:-us-west-2}"
 
 if [ -f "config.json" ]; then
-    PROJECT_NAME=$(python3 -c "import json; print(json.load(open('config.json'))['projectName'].lower())")
+    PROJECT_NAME=$(python3 -c "import json; print(json.load(open('config.json'))['projectName'])")
 
     CURRENT_FOLDER_NAME=$(basename $(pwd))
     echo "CURRENT_FOLDER_NAME: ${CURRENT_FOLDER_NAME}"

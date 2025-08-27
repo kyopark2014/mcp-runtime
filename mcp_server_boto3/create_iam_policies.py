@@ -86,6 +86,37 @@ def create_bedrock_agentcore_policy():
                     f"arn:aws:logs:{region}:*:log-group:/aws/bedrock-agentcore/*",
                     f"arn:aws:logs:{region}:*:log-group:/aws/bedrock-agentcore/*:log-stream:*"
                 ]
+            },
+            {
+                "Sid": "CloudWatchAccess",
+                "Effect": "Allow",
+                "Action": [
+                    'cloudwatch:ListMetrics', 
+                    'cloudwatch:GetMetricData',
+                    'cloudwatch:GetMetricStatistics',
+                    'cloudwatch:GetMetricWidgetImage',
+                    'cloudwatch:GetMetricData',
+                    'cloudwatch:GetMetricData',
+                    'xray:PutTraceSegments',
+                    'xray:PutTelemetryRecords',
+                    'xray:PutAttributes',
+                    'xray:GetTraceSummaries',
+                    'logs:CreateLogGroup',
+                    'logs:DescribeLogStreams', 
+                    'logs:DescribeLogGroups', 
+                    'logs:CreateLogStream', 
+                    'logs:PutLogEvents'
+                ],
+                "Resource": "*"
+            },
+            {
+                "Sid": "S3Access",
+                "Effect": "Allow",
+                "Action": [
+                    "s3:*",
+                    "bedrock:*"
+                ],
+                "Resource": "*"
             }
         ]
     }

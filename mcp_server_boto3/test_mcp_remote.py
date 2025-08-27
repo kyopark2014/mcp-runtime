@@ -57,7 +57,7 @@ def create_cognito_bearer_token(config):
 
 def get_bearer_token():
     try:
-        secret_name = f'{projectName}/cognito/credentials'
+        secret_name = config['secret_name']
         session = boto3.Session()
         client = session.client('secretsmanager', region_name=region)
         response = client.get_secret_value(SecretId=secret_name)
@@ -75,10 +75,8 @@ def get_bearer_token():
         print(f"Error getting stored token: {e}")
         return None
 
-def save_bearer_token(bearer_token):
-    try:
-        secret_name = f'{config["projectName"].lower()}/cognito/credentials'
-
+def save_bearer_token(secret_name, bearer_token):
+    try:        
         session = boto3.Session()
         client = session.client('secretsmanager', region_name=region)
         
@@ -111,6 +109,7 @@ def save_bearer_token(bearer_token):
             
     except Exception as e:
         print(f"Error saving bearer token: {e}")
+        # Continue execution even if saving fails
 
 async def main():
     agent_arn = config['agent_runtime_arn']
@@ -118,15 +117,21 @@ async def main():
     
     # Check basic AWS connectivity
     bearer_token = get_bearer_token()
-    print(f"Bearer token from secret manager: {bearer_token}")
+    print(f"Bearer token from secret manager: {bearer_token[:100] if bearer_token else 'None'}...")
+    #print(f"Bearer token from secret manager: {bearer_token}")
 
     if not bearer_token:    
         # Try to get fresh bearer token from Cognito
         print("No bearer token found in secret manager, getting fresh bearer token from Cognito...")
         bearer_token = create_cognito_bearer_token(config)
-        print(f"Bearer token from cognito: {bearer_token}")
+        print(f"Bearer token from cognito: {bearer_token[:100] if bearer_token else 'None'}...")
         
-        save_bearer_token(bearer_token)
+        if bearer_token:
+            secret_name = config['secret_name']
+            save_bearer_token(secret_name, bearer_token)
+        else:
+            print("Failed to get bearer token from Cognito. Exiting.")
+            return
                 
     encoded_arn = agent_arn.replace(':', '%3A').replace('/', '%2F')
     
@@ -170,9 +175,48 @@ async def main():
             successful_url = mcp_url
             successful_headers = headers            
         else:
-            print(f"Error: {response.status_code}")            
+            print(f"Error: {response.status_code}")
+            print(f"Response body: {response.text}")
+            if response.status_code == 403:
+                print("403 Forbidden - Token may be expired, trying to get fresh token from Cognito...")
+                # Try to get fresh bearer token from Cognito
+                fresh_bearer_token = create_cognito_bearer_token(config)
+                if fresh_bearer_token:
+                    print("Successfully obtained fresh token, updating headers and retrying...")
+                    # Update headers with fresh token
+                    headers["Authorization"] = f"Bearer {fresh_bearer_token}"
+                    # Save the fresh token
+                    secret_name = config['secret_name']
+                    save_bearer_token(secret_name, fresh_bearer_token)
+                    
+                    # Retry the request with fresh token
+                    response = requests.post(
+                        mcp_url,
+                        headers=headers,
+                        data=request_body,
+                        timeout=30
+                    )
+                    
+                    if response.status_code == 200:
+                        print("Success with fresh token!")
+                        successful_url = mcp_url
+                        successful_headers = headers
+                    else:
+                        print(f"Still getting error with fresh token: {response.status_code}")
+                        print(f"Response body: {response.text}")
+                        return
+                else:
+                    print("Failed to get fresh token from Cognito")
+                    return
+            else:
+                return
     except Exception as e:
         print(f"Connection failed: {e}")
+        return
+
+    if not successful_url or not successful_headers:
+        print("Failed to establish successful connection. Exiting.")
+        return
 
     mcp_url = successful_url
     headers = successful_headers
@@ -266,9 +310,12 @@ async def main():
                             print(f"Content: {content.text}")
                 
                 print("\n=== MCP Connection Test Complete ===")
-                
+                                
     except Exception as e:
         print(f"MCP connection failed: {e}")
+        print(f"Error type: {type(e)}")
+        import traceback
+        traceback.print_exc()
         
 if __name__ == "__main__":
     asyncio.run(main())
