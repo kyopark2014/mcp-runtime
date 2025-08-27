@@ -2125,7 +2125,7 @@ async def run_langgraph_agent(query, mcp_servers, history_mode, containers):
     except Exception as e:
         logger.error(f"Error creating MCP client or getting tools: {e}")
         tools = []
-        tool_list = []
+        tool_list = []        
 
     # If no tools available, use general conversation
     if not tools:
