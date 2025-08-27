@@ -111,6 +111,22 @@ def create_cognito_bearer_token(config):
         return None
 
 mcp_user_config = {}    
+
+def get_agent_runtime_arn(mcp_type: str):
+    logger.info(f"mcp_type: {mcp_type}")
+    agent_runtime_name = "mcp_"+mcp_type.replace("-", "_")
+    logger.info(f"agent_runtime_name: {agent_runtime_name}")
+    client = boto3.client('bedrock-agentcore-control', region_name='us-west-2')
+    response = client.list_agent_runtimes()
+    logger.info(f"response: {response}")
+    
+    agentRuntimes = response['agentRuntimes']
+    for agentRuntime in agentRuntimes:
+        if agentRuntime["agentRuntimeName"] == agent_runtime_name:
+            logger.info(f"agent_runtime_name: {agent_runtime_name}, agentRuntimeArn: {agentRuntime["agentRuntimeArn"]}")
+            return agentRuntime["agentRuntimeArn"]
+    return None
+
 def load_config(mcp_type):
     if mcp_type == "use_aws (docker)":
         mcp_type = "use_aws_docker"
@@ -146,8 +162,8 @@ def load_config(mcp_type):
             }
         }
     elif mcp_type == "use_aws":
-        agent_arn = 'arn:aws:bedrock-agentcore:us-west-2:262976740991:runtime/mcp_use_aws-7VJq6Z6QoO'
-        logger.info(f"agent_arn: {agent_arn}")
+        agent_arn = get_agent_runtime_arn(mcp_type)
+        logger.info(f"mcp_type: {mcp_type}, agent_arn: {agent_arn}")
         encoded_arn = agent_arn.replace(':', '%3A').replace('/', '%2F')
 
         secret_name = f'mcp/{mcp_type}/credentials'
@@ -196,8 +212,8 @@ def load_config(mcp_type):
             }
         }
     elif mcp_type == "kb-retriever":
-        agent_arn = 'arn:aws:bedrock-agentcore:us-west-2:262976740991:runtime/mcp_kb_retriever-cDbCFGEAX8'
-        logger.info(f"agent_arn: {agent_arn}")
+        agent_arn = get_agent_runtime_arn(mcp_type)
+        logger.info(f"mcp_type: {mcp_type}, agent_arn: {agent_arn}")
         encoded_arn = agent_arn.replace(':', '%3A').replace('/', '%2F')
 
         secret_name = f'mcp/{mcp_type}/credentials'
