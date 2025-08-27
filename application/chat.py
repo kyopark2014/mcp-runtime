@@ -2124,8 +2124,47 @@ async def run_langgraph_agent(query, mcp_servers, history_mode, containers):
         
     except Exception as e:
         logger.error(f"Error creating MCP client or getting tools: {e}")
-        tools = []
-        tool_list = []        
+        
+        # Try to refresh bearer token and retry
+        logger.info("Attempting to refresh bearer token and retry...")
+        try:
+            # Get fresh bearer token from Cognito
+            config = utils.load_config()
+            bearer_token = mcp_config.create_cognito_bearer_token(config)
+            if bearer_token:
+                logger.info("Successfully obtained fresh bearer token")
+                
+                # Update the server parameters with new bearer token
+                for server_name, server_config in server_params.items():
+                    if 'headers' in server_config and 'Authorization' in server_config['headers']:
+                        server_config['headers']['Authorization'] = f"Bearer {bearer_token}"
+                        logger.info(f"Updated bearer token for server: {server_name}")
+                
+                # Save the new bearer token
+                secret_name = config.get('secret_name')
+                mcp_config.save_bearer_token(secret_name, bearer_token)
+                
+                # Retry with new bearer token
+                logger.info("Retrying MCP client creation with fresh bearer token...")
+                client = MultiServerMCPClient(server_params)
+                tools = await client.get_tools()
+                
+                if tools is None:
+                    logger.error("tools is still None after bearer token refresh")
+                    tools = []
+                
+                tool_list = [tool.name for tool in tools] if tools else []
+                logger.info(f"tool_list after retry: {tool_list}")
+                
+            else:
+                logger.error("Failed to get fresh bearer token from Cognito")
+                tools = []
+                tool_list = []
+                
+        except Exception as retry_error:
+            logger.error(f"Error during bearer token refresh and retry: {retry_error}")
+            tools = []
+            tool_list = []        
 
     # If no tools available, use general conversation
     if not tools:

@@ -18,5 +18,5 @@
         "test_username": "mcp-test-user@example.com",
         "test_password": "TestPassword123!"
     },
-    "secret_name": "mcp/kb-retriever/credentials"
+    "secret_name": "mcp/credentials"
 }

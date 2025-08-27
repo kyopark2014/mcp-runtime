@@ -192,8 +192,53 @@ class MCPClientManager:
                     except Exception as http_error:
                         logger.error(f"Failed to create streamable HTTP client for {name}: {http_error}")
                         if "403" in str(http_error) or "Forbidden" in str(http_error):
-                            logger.error(f"Authentication failed for {name}. Please check AWS credentials and bearer token.")
-                        raise
+                            logger.error(f"Authentication failed for {name}. Attempting to refresh bearer token...")
+                            
+                            # Try to refresh bearer token and retry
+                            try:
+                                # Get fresh bearer token from Cognito
+                                bearer_token = mcp_config.create_cognito_bearer_token(config)
+                                if bearer_token:
+                                    logger.info("Successfully obtained fresh bearer token")
+                                    
+                                    # Update headers with new bearer token
+                                    updated_headers = config["headers"].copy()
+                                    updated_headers['Authorization'] = f"Bearer {bearer_token}"
+                                    logger.info(f"Updated bearer token for {name}")
+                                    
+                                    # Update the client configuration
+                                    self.client_configs[name]["headers"] = updated_headers
+                                    
+                                    # Save the new bearer token
+                                    secret_name = config.get('secret_name')
+                                    mcp_config.save_bearer_token(secret_name, bearer_token)
+                                    
+                                    # Retry with new bearer token
+                                    logger.info("Retrying MCP client creation with fresh bearer token...")
+                                    if config.get("is_remote_aws", False):
+                                        self.clients[name] = MCPClient(lambda: streamablehttp_client(
+                                            url=config["url"], 
+                                            headers=updated_headers,
+                                            timeout=120,
+                                            terminate_on_close=False
+                                        ))
+                                    else:
+                                        self.clients[name] = MCPClient(lambda: streamablehttp_client(
+                                            url=config["url"], 
+                                            headers=updated_headers
+                                        ))
+                                    
+                                    logger.info(f"Successfully created MCP client for {name} after bearer token refresh")
+                                    
+                                else:
+                                    logger.error("Failed to get fresh bearer token from Cognito")
+                                    raise http_error
+                                    
+                            except Exception as retry_error:
+                                logger.error(f"Error during bearer token refresh and retry: {retry_error}")
+                                raise http_error
+                        else:
+                            raise http_error
                 else:
                     self.clients[name] = MCPClient(lambda: stdio_client(
                         StdioServerParameters(
@@ -323,7 +368,39 @@ def init_mcp_clients(mcp_servers: list):
                 logger.info(f"Successfully added streamable MCP client for {name}")
             except Exception as e:
                 logger.error(f"Failed to add streamable MCP client for {name}: {e}")
-                continue            
+                
+                # Try to refresh bearer token and retry for remote AWS connections
+                if "bedrock-agentcore" in url.lower() and ("403" in str(e) or "Forbidden" in str(e)):
+                    logger.info("Attempting to refresh bearer token and retry for remote AWS connection...")
+                    try:
+                        # Get fresh bearer token from Cognito
+                        bearer_token = mcp_config.create_cognito_bearer_token(config)
+                        if bearer_token:
+                            logger.info("Successfully obtained fresh bearer token")
+                            
+                            # Update headers with new bearer token
+                            updated_headers = headers.copy()
+                            updated_headers['Authorization'] = f"Bearer {bearer_token}"
+                            logger.info(f"Updated bearer token for {name}")
+                            
+                            # Save the new bearer token
+                            secret_name = config.get('secret_name')
+                            mcp_config.save_bearer_token(secret_name, bearer_token)
+                            
+                            # Retry with new bearer token
+                            logger.info("Retrying MCP client creation with fresh bearer token...")
+                            mcp_manager.add_streamable_client(name, url, updated_headers)
+                            logger.info(f"Successfully added streamable MCP client for {name} after bearer token refresh")
+                            
+                        else:
+                            logger.error("Failed to get fresh bearer token from Cognito")
+                            continue
+                            
+                    except Exception as retry_error:
+                        logger.error(f"Error during bearer token refresh and retry: {retry_error}")
+                        continue
+                else:
+                    continue            
         else:
             name = tool  # Use tool name as client name
             command = server_config["command"]
@@ -382,6 +459,58 @@ def update_tools(strands_tools: list, mcp_servers: list):
             logger.error(f"Exception type: {type(e)}")
             import traceback
             logger.error(f"Traceback: {traceback.format_exc()}")
+            
+            # Try to refresh bearer token and retry for remote AWS connections
+            if "403" in str(e) or "Forbidden" in str(e):
+                logger.info(f"Attempting to refresh bearer token and retry for {mcp_tool}...")
+                try:
+                    # Get fresh bearer token from Cognito
+                    config = mcp_config.load_config(mcp_tool)
+                    bearer_token = mcp_config.create_cognito_bearer_token(config)
+                    if bearer_token:
+                        logger.info("Successfully obtained fresh bearer token")
+                        
+                        # Update the MCP client configuration with new bearer token
+                        if mcp_tool in mcp_manager.client_configs:
+                            client_config = mcp_manager.client_configs[mcp_tool]
+                            if 'headers' in client_config and 'Authorization' in client_config['headers']:
+                                client_config['headers']['Authorization'] = f"Bearer {bearer_token}"
+                                logger.info(f"Updated bearer token for {mcp_tool}")
+                                
+                                # Remove the old client to force recreation
+                                if mcp_tool in mcp_manager.clients:
+                                    del mcp_manager.clients[mcp_tool]
+                                
+                                # Save the new bearer token
+                                secret_name = config.get('secret_name')                                
+                                mcp_config.save_bearer_token(secret_name, bearer_token)
+                                
+                                # Retry getting tools
+                                logger.info("Retrying tool retrieval with fresh bearer token...")
+                                with mcp_manager.get_active_clients([mcp_tool]) as _:
+                                    client = mcp_manager.get_client(mcp_tool)
+                                    if client:
+                                        mcp_servers_list = client.list_tools_sync()
+                                        if mcp_servers_list:
+                                            tools.extend(mcp_servers_list)
+                                            mcp_servers_loaded += 1
+                                            logger.info(f"Successfully added {len(mcp_servers_list)} tools from {mcp_tool} after bearer token refresh")
+                                        else:
+                                            logger.warning(f"No tools returned from {mcp_tool} after bearer token refresh")
+                                    else:
+                                        logger.error(f"Failed to get client for {mcp_tool} after bearer token refresh")
+                                
+                            else:
+                                logger.error(f"No Authorization header found in client config for {mcp_tool}")
+                        else:
+                            logger.error(f"No client config found for {mcp_tool}")
+                            
+                    else:
+                        logger.error("Failed to get fresh bearer token from Cognito")
+                        
+                except Exception as retry_error:
+                    logger.error(f"Error during bearer token refresh and retry: {retry_error}")
+            
             continue
 
     logger.info(f"Successfully loaded {mcp_servers_loaded} out of {len(mcp_servers)} MCP tools")

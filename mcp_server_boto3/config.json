@@ -17,5 +17,5 @@
         "test_username": "mcp-test-user@example.com",
         "test_password": "TestPassword123!"
     },
-    "secret_name": "mcp/mcp_server_boto3/credentials"
+    "secret_name": "mcp/credentials"
 }
