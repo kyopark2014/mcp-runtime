@@ -150,12 +150,16 @@ class MCPClientManager:
     
     def add_streamable_client(self, name: str, url: str, headers: dict[str, str] = {}) -> None:
         """Add a new MCP client configuration (lazy initialization)"""
+        # Check if this is a remote AWS Bedrock AgentCore connection
+        is_remote_aws = "bedrock-agentcore" in url.lower()
+        
         self.client_configs[name] = {
             "transport": "streamable_http",
             "url": url,
-            "headers": headers
+            "headers": headers,
+            "is_remote_aws": is_remote_aws
         }
-        logger.info(f"Stored configuration for MCP client: {name}")
+        logger.info(f"Stored configuration for MCP client: {name} (remote_aws: {is_remote_aws})")
     
     def get_client(self, name: str) -> Optional[MCPClient]:
         """Get or create MCP client (lazy initialization)"""
@@ -169,10 +173,26 @@ class MCPClientManager:
             logger.info(f"Creating MCP client for {name} with config: {config}")
             try:
                 if "transport" in config and config["transport"] == "streamable_http":
-                    self.clients[name] = MCPClient(lambda: streamablehttp_client(
-                        url=config["url"], 
-                        headers=config["headers"]
-                    ))
+                    try:
+                        # For remote AWS connections, use different timeout settings
+                        if config.get("is_remote_aws", False):
+                            logger.info(f"Creating remote AWS client for {name}")
+                            self.clients[name] = MCPClient(lambda: streamablehttp_client(
+                                url=config["url"], 
+                                headers=config["headers"],
+                                timeout=120,  # Longer timeout for remote connections
+                                terminate_on_close=False  # Don't terminate on close for AWS
+                            ))
+                        else:
+                            self.clients[name] = MCPClient(lambda: streamablehttp_client(
+                                url=config["url"], 
+                                headers=config["headers"]
+                            ))
+                    except Exception as http_error:
+                        logger.error(f"Failed to create streamable HTTP client for {name}: {http_error}")
+                        if "403" in str(http_error) or "Forbidden" in str(http_error):
+                            logger.error(f"Authentication failed for {name}. Please check AWS credentials and bearer token.")
+                        raise
                 else:
                     self.clients[name] = MCPClient(lambda: stdio_client(
                         StdioServerParameters(
@@ -189,6 +209,22 @@ class MCPClientManager:
                 import traceback
                 logger.error(f"Traceback: {traceback.format_exc()}")
                 return None
+        else:
+            # Check if client is already running and stop it if necessary
+            try:
+                client = self.clients[name]
+                if hasattr(client, '_session') and client._session is not None:
+                    logger.info(f"Stopping existing session for client: {name}")
+                    try:
+                        client.stop()
+                    except Exception as stop_error:
+                        # Ignore 404 errors during session termination (common with AWS Bedrock AgentCore)
+                        if "404" in str(stop_error) or "Not Found" in str(stop_error):
+                            logger.info(f"Session already terminated for {name} (404 expected)")
+                        else:
+                            logger.warning(f"Error stopping existing client session for {name}: {stop_error}")
+            except Exception as e:
+                logger.warning(f"Error checking client session for {name}: {e}")
                 
         return self.clients[name]
     
@@ -208,13 +244,45 @@ class MCPClientManager:
             for client_name in active_clients:
                 client = self.get_client(client_name)
                 if client:
+                    # Ensure client is not already running
+                    try:
+                        if hasattr(client, '_session') and client._session is not None:
+                            logger.info(f"Stopping existing session for client: {client_name}")
+                            try:
+                                client.stop()
+                            except Exception as stop_error:
+                                # Ignore 404 errors during session termination (common with AWS Bedrock AgentCore)
+                                if "404" in str(stop_error) or "Not Found" in str(stop_error):
+                                    logger.info(f"Session already terminated for {client_name} (404 expected)")
+                                else:
+                                    logger.warning(f"Error stopping existing session for {client_name}: {stop_error}")
+                    except Exception as e:
+                        logger.warning(f"Error checking existing session for {client_name}: {e}")
+                    
                     active_contexts.append(client)
 
             # logger.info(f"active_contexts: {active_contexts}")
             if active_contexts:
                 with contextlib.ExitStack() as stack:
                     for client in active_contexts:
-                        stack.enter_context(client)
+                        try:
+                            stack.enter_context(client)
+                        except Exception as e:
+                            logger.error(f"Error entering context for client: {e}")
+                            # Try to stop the client if it's already running
+                            try:
+                                if hasattr(client, 'stop'):
+                                    try:
+                                        client.stop()
+                                    except Exception as stop_error:
+                                        # Ignore 404 errors during session termination
+                                        if "404" in str(stop_error) or "Not Found" in str(stop_error):
+                                            logger.info(f"Session already terminated (404 expected)")
+                                        else:
+                                            logger.warning(f"Error stopping client: {stop_error}")
+                            except:
+                                pass
+                            raise
                     yield
             else:
                 yield
@@ -293,14 +361,18 @@ def update_tools(strands_tools: list, mcp_servers: list):
                 client = mcp_manager.get_client(mcp_tool)
                 if client:
                     logger.info(f"Got client for {mcp_tool}, attempting to list tools...")
-                    mcp_servers_list = client.list_tools_sync()
-                    logger.info(f"{mcp_tool}_tools: {mcp_servers_list}")
-                    if mcp_servers_list:
-                        tools.extend(mcp_servers_list)
-                        mcp_servers_loaded += 1
-                        logger.info(f"Successfully added {len(mcp_servers_list)} tools from {mcp_tool}")
-                    else:
-                        logger.warning(f"No tools returned from {mcp_tool}")
+                    try:
+                        mcp_servers_list = client.list_tools_sync()
+                        logger.info(f"{mcp_tool}_tools: {mcp_servers_list}")
+                        if mcp_servers_list:
+                            tools.extend(mcp_servers_list)
+                            mcp_servers_loaded += 1
+                            logger.info(f"Successfully added {len(mcp_servers_list)} tools from {mcp_tool}")
+                        else:
+                            logger.warning(f"No tools returned from {mcp_tool}")
+                    except Exception as tool_error:
+                        logger.error(f"Error listing tools for {mcp_tool}: {tool_error}")
+                        continue
                 else:
                     logger.error(f"Failed to get client for {mcp_tool}")
         except Exception as e:
