@@ -17,6 +17,7 @@ from strands.tools.mcp import MCPClient
 from mcp import stdio_client, StdioServerParameters
 from mcp.client.streamable_http import streamablehttp_client
 from botocore.config import Config
+from speak import speak
 from bedrock_agentcore.runtime import BedrockAgentCoreApp
 
 logging.basicConfig(
@@ -342,7 +343,8 @@ def update_tools(strands_tools: list, mcp_servers: list):
     tool_map = {
         "calculator": calculator,
         "current_time": current_time,
-        "use_aws": use_aws
+        "use_aws": use_aws,
+        "speak": speak
         # "python_repl": python_repl  # Temporarily disabled
     }
 
