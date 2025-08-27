@@ -52,7 +52,7 @@ python mcp_server_use_aws.py
 python mcp_client.py
 ```
 
-### AgentCore Toolkit
+### AgentCore CLI
 
 아래와 같이 [AgentCore Toolkit](https://github.com/aws/bedrock-agentcore-starter-toolkit)을 설치합니다. 
 
