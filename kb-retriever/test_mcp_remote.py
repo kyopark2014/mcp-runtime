@@ -142,6 +142,8 @@ async def main():
         "Content-Type": "application/json",
         "Accept": "application/json, text/event-stream"
     }
+    print(f"MCP URL: {mcp_url}")
+    print(f"Headers: {headers}")
 
     # Prepare the request body for MCP initialization
     request_body = json.dumps({
