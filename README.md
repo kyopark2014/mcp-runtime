@@ -1,5 +1,82 @@
 # MCP Tool Deployment
 
+여기에서는 AgentCore Runtime을 이용해 MCP tool을 배포하는것에 대해 설명합니다. 
+
+## Agent Tool 배포를 위한 준비
+
+AgentCore로 배포하기 위해서는 MCP 설정시 [mcp_server_retrieve.py](./application/kb-retriever/mcp_server_retrieve.py)와 같이 host를 "0.0.0.0"으로 설정하고 외부로는 [Dockerfile](./application/kb-retriever/Dockerfile)와 같이 8000 포트를 expose 합니다.
+
+```python
+mcp = FastMCP(
+    name = "mcp-retrieve",
+    instructions=(
+        "You are a helpful assistant. "
+        "You retrieve documents in RAG."
+    ),
+    host="0.0.0.0",
+    stateless_http=True
+)
+```
+
+AgentCore의 runtime으로 MCP를 배포한 후에 활용할 때에는 bearer token을 이용해 인증을 수행합니다. bearer token은 Cognito와 같은 서비스를 통해 생성할 수 있습니다. 아래와 같이 Cognito에 정의한 username/password를 이용해 access token를 생성합니다.
+
+```python
+client = boto3.client('cognito-idp', region_name=region)
+
+# Authenticate and get tokens
+response = client.initiate_auth(
+    ClientId=client_id,
+    AuthFlow='USER_PASSWORD_AUTH',
+    AuthParameters={
+        'USERNAME': username,
+        'PASSWORD': password
+    }
+)
+auth_result = response['AuthenticationResult']
+access_token = auth_result['AccessToken']
+```
+
+AgentCore에 MCP runtime을 배포하면 agent_arn을 얻을 수 있습니다. 이 값은 AgentCore에서 생성할 때 알 수 있으며, 아래와 같이 agent_runtime_name을 가지고 검색할 수도 있습니다.
+
+```python
+client = boto3.client('bedrock-agentcore-control', region_name='us-west-2')
+response = client.list_agent_runtimes()
+agentRuntimes = response['agentRuntimes']
+for agentRuntime in agentRuntimes:
+    if agentRuntime["agentRuntimeName"] == agent_runtime_name:
+        return agentRuntime["agentRuntimeArn"]
+```    
+
+Agent의 arn을 url encoding해서 아래와 같이 mcp_url을 생성합니다. 이때 header의 Authorization에 Cognito를 이용해 생성한 bearer token을 입력합니다.
+
+```python
+encoded_arn = agent_arn.replace(':', '%3A').replace('/', '%2F')    
+mcp_url = f"https://bedrock-agentcore.{region}.amazonaws.com/runtimes/{encoded_arn}/invocations?qualifier=DEFAULT"
+headers = {
+    "Authorization": f"Bearer {bearer_token}",
+    "Content-Type": "application/json",
+    "Accept": "application/json, text/event-stream"
+}
+```
+
+이제 mcp_url, headers는 아래와 같이 MCP server의 설정 정보로 활용됩니다.
+
+```python
+"mcpServers": {
+    "kb-retriever": {
+        "type": "streamable_http",
+        "url": f"https://bedrock-agentcore.{region}.amazonaws.com/runtimes/{encoded_arn}/invocations?qualifier=DEFAULT",
+        "headers": {
+            "Authorization": f"Bearer {bearer_token}",
+            "Content-Type": "application/json",
+            "Accept": "application/json, text/event-stream"
+        }
+    }
+}
+```
+
+
+
 
 ## Deployment
 
