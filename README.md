@@ -6,7 +6,7 @@
 
 
 
-## Streamable HTTP 방식의 MCP Tool 배포 준비
+## Streamable HTTP 방식의 MCP Tool 배포
 
 AgentCore로 배포하기 위해서는 MCP 설정시 [mcp_server_retrieve.py](./kb-retriever/mcp_server_retrieve.py)와 같이 host를 "0.0.0.0"으로 설정하고 외부로는 [Dockerfile](./kb-retriever/Dockerfile)와 같이 8000 포트를 expose 합니다.
 
@@ -77,10 +77,7 @@ headers = {
 }
 ```
 
-
-
-
-## Deployment
+## Deployment 방법
 
 아래와 같이 IAM policy를 생성합니다. 생성된 policy의 이름은 BedrockAgentCoreMCPRoleFor에 project name을 합한 형태입니다.
 
@@ -116,24 +113,9 @@ python test_mcp_remote.py
 
 <img width="600" alt="noname" src="https://github.com/user-attachments/assets/5bc2ce14-5ad5-43b2-a6f4-2a359b76bfe4" />
 
+### AgentCore CLI 활용 방법
 
-## Local Test
-
-MCP 서버는 아래와 같이 실행합니다.
-
-```text
-python mcp_server_use_aws.py
-```
-
-기본 Client의 실행은 아래와 같습니다. 아래 [mcp_client.py](./mcp_client.py)은 streamable http로 "http://localhost:8000/mcp" 로 연결할 수 있는 MCP 서버의 정보를 가져와 사용할 수 있는 tool에 대한 정보를 제공합니다. 
-
-```text
-python mcp_client.py
-```
-
-### AgentCore CLI
-
-아래와 같이 [AgentCore Toolkit](https://github.com/aws/bedrock-agentcore-starter-toolkit)을 설치합니다. 
+Boto3를 이용한 API 이외에도 [AgentCore Toolkit](https://github.com/aws/bedrock-agentcore-starter-toolkit)을 이용해 배포할 수 있습니다.
 
 ```text
 pip install bedrock-agentcore-starter-toolkit
@@ -164,7 +146,32 @@ agentcore launch
 agentcore invoke '{"prompt": "Hello from Bedrock AgentCore!"}'
 ```
 
+### Local Test
+
+MCP 서버는 아래와 같이 실행합니다.
+
+```text
+python mcp_server_use_aws.py
+```
+
+기본 Client의 실행은 아래와 같습니다. 아래 [mcp_client.py](./mcp_client.py)은 streamable http로 "http://localhost:8000/mcp" 로 연결할 수 있는 MCP 서버의 정보를 가져와 사용할 수 있는 tool에 대한 정보를 제공합니다. 
+
+```text
+python mcp_client.py
+```
+
 ## 실행 결과
+
+Streamlit app을 아래와 같이 실행합니다. 
+
+```python
+streamlit run application/app.py
+```
+
+이때 아래와 같이 LangGraph와 Strand agent를 선택할 수 있고, use-aws와 kb-retriever를 이용할 수 있습니다. Streamable HTTP 방식 MCP를 배포하기 전에 docker를 선택해서 로컬에서 테스트 할 수 있으며, 다양한 언어 모델을 선택할 수 있습니다.
+
+<img width="343" height="471" alt="image" src="https://github.com/user-attachments/assets/ecbf3325-4b92-459f-a080-9c1ce297e8e3" />
+
 
 왼쪽 메뉴의 MCP Config에서 "use_aws (streamable)"을 선택한 후에 "내 EKS 현황은?"라고 질문하면, 아래와 같이 use-aws tool을 이용하여 EKS의 상황을 조회할 수 있습니다. 
 
