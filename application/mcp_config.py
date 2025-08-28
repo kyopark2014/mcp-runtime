@@ -116,7 +116,7 @@ def get_agent_runtime_arn(mcp_type: str):
     #logger.info(f"mcp_type: {mcp_type}")
     agent_runtime_name = "mcp_"+mcp_type.replace("-", "_")
     #logger.info(f"agent_runtime_name: {agent_runtime_name}")
-    client = boto3.client('bedrock-agentcore-control', region_name='us-west-2')
+    client = boto3.client('bedrock-agentcore-control', region_name=region)
     response = client.list_agent_runtimes()
     #logger.info(f"response: {response}")
     
