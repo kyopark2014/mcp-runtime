@@ -1617,7 +1617,8 @@ def run_rag_with_knowledge_base(query, st):
         logger.info(f"reference_docs: {reference_docs}")
         ref = "\n\n### Reference\n"
         for i, reference in enumerate(reference_docs):
-            ref += f"{i+1}. [{reference.metadata['name']}]({reference.metadata['url']}), {reference.page_content[:100]}...\n"    
+            page_content = reference['content'][:100].replace("\n", "")
+            ref += f"{i+1}. [{reference.metadata['name']}]({reference.metadata['url']}), {page_content}...\n"    
         logger.info(f"ref: {ref}")
         msg += ref
     
@@ -2087,7 +2088,8 @@ async def run_strands_agent(query, strands_tools, mcp_servers, history_mode, con
         if references:
             ref = "\n\n### Reference\n"
             for i, reference in enumerate(references):
-                ref += f"{i+1}. [{reference['title']}]({reference['url']}), {reference['content']}...\n"    
+                page_content = reference['content'][:100].replace("\n", "")
+                ref += f"{i+1}. [{reference['title']}]({reference['url']}), {page_content}...\n"    
             final_result += ref
 
         if containers is not None:
@@ -2278,7 +2280,8 @@ async def run_langgraph_agent(query, mcp_servers, history_mode, containers):
     if references:
         ref = "\n\n### Reference\n"
         for i, reference in enumerate(references):
-            ref += f"{i+1}. [{reference['title']}]({reference['url']}), {reference['content']}...\n"    
+            page_content = reference['content'][:100].replace("\n", "")
+            ref += f"{i+1}. [{reference['title']}]({reference['url']}), {page_content}...\n"    
         result += ref
     
     if containers is not None:

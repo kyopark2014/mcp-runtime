@@ -442,8 +442,8 @@ def main():
         target = current_folder_name.split('/')[-1].lower()
         print(f"target: {target}")
 
-        # secret_name = f'mcp/{target}/credentials'
-        secret_name = f'mcp/credentials'
+        project = config['projectName'].lower()
+        secret_name = f'{project}/credentials'
         print(f"secret_name: {secret_name}")
         
         try:
