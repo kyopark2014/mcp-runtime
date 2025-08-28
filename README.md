@@ -166,9 +166,15 @@ agentcore invoke '{"prompt": "Hello from Bedrock AgentCore!"}'
 
 ## 실행 결과
 
-왼쪽 메뉴의 MCP Config에서 "kb-retriever (remote)"을 선택한 후에 "보일러 에러 코드?"로 입력하면, Streamable HTTP를 지원하는 knowledge base MCP에 접속하여 관련된 문서를 아래와 같이 가져와서 답변할 수 있습니다.
+왼쪽 메뉴의 MCP Config에서 "use_aws (streamable)"을 선택한 후에 "내 EKS 현황은?"라고 질문하면, 아래와 같이 use-aws tool을 이용하여 EKS의 상황을 조회할 수 있습니다. 
 
-<img width="1292" height="759" alt="image" src="https://github.com/user-attachments/assets/a58b5e92-a478-4120-b5ce-3f2116f662ca" />
+<img width="655" alt="image" src="https://github.com/user-attachments/assets/d4d2548d-0e60-4e57-b390-53a2ee02bd03" />
+
+또한, "kb-retriever (remote)"을 선택한 후에 "보일러 에러 코드?"로 입력하면, Streamable HTTP를 지원하는 knowledge base MCP에 접속하여 관련된 문서를 아래와 같이 가져와서 답변할 수 있습니다.
+
+<img width="655" alt="image" src="https://github.com/user-attachments/assets/e499b049-9f93-4136-a330-0dc679389b6d" />
+
+
 
 
 
