@@ -22,8 +22,6 @@ AgentCore의 runtime으로 MCP를 배포한 후에 활용할 때에는 bearer to
 
 ```python
 client = boto3.client('cognito-idp', region_name=region)
-
-# Authenticate and get tokens
 response = client.initiate_auth(
     ClientId=client_id,
     AuthFlow='USER_PASSWORD_AUTH',
