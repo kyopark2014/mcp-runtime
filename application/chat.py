@@ -2131,7 +2131,8 @@ async def run_langgraph_agent(query, mcp_servers, history_mode, containers):
         logger.info("Attempting to refresh bearer token and retry...")
         try:
             # Get fresh bearer token from Cognito
-            bearer_token = mcp_config.create_cognito_bearer_token(utils.load_config())
+            config = utils.load_config()
+            bearer_token = mcp_config.create_cognito_bearer_token(config)
             if bearer_token:
                 logger.info("Successfully obtained fresh bearer token")
                 

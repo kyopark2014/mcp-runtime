@@ -114,11 +114,13 @@ mcp_user_config = {}
 
 def get_agent_runtime_arn(mcp_type: str):
     #logger.info(f"mcp_type: {mcp_type}")
-    agent_runtime_name = "mcp_"+mcp_type.replace("-", "_")
-    #logger.info(f"agent_runtime_name: {agent_runtime_name}")
+    agent_runtime_name = f"{projectName.lower()}_{mcp_type.replace('-', '_')}"
+    logger.info(f"agent_runtime_name: {agent_runtime_name}")
     client = boto3.client('bedrock-agentcore-control', region_name=region)
-    response = client.list_agent_runtimes()
-    #logger.info(f"response: {response}")
+    response = client.list_agent_runtimes(
+        maxResults=100
+    )
+    logger.info(f"response: {response}")
     
     agentRuntimes = response['agentRuntimes']
     for agentRuntime in agentRuntimes:
