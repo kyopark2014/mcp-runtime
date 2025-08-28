@@ -1,6 +1,10 @@
 # MCP Tool Deployment
 
-여기에서는 AgentCore Runtime을 이용해 MCP tool을 배포하는것에 대해 설명합니다. 
+여기에서는 AgentCore Runtime을 이용해 MCP tool을 배포하는것에 대해 설명합니다. 전체적인 architecture는 아래와 같습니다. 사용자는 Streamlit으로 구현된 application을 통해 질문을 입력할 수 있고, LangGraph/Strands agent를 선택하여 활용합니다. 여기에서는 Knowledge base를 조회하는 kb-retriever와 AWS infrastructure를 관리할 수 있는 use-aws를 MCP tool로 제공하며, 이 tool들은 AgentCore에 runtime으로 배포됩니다.
+
+<img width="800" alt="image" src="https://github.com/user-attachments/assets/62e33c60-543f-42bf-9962-33daf13c4c00" />
+
+
 
 ## Agent Tool 배포를 위한 준비
 
