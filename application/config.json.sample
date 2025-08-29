@@ -1,0 +1,21 @@
+{
+    "projectName":"",
+    "accountId":"",
+    "region":"",
+    "knowledge_base_role":"",
+    "collectionArn":"",
+    "opensearch_url":"",
+    "s3_bucket":"",
+    "s3_arn":"",
+    "sharing_url":"",
+    "agentcore_memory_role":"",
+    "agent_runtime_arn": "",
+    "cognito": {
+        "client_id": "",
+        "client_name": "",
+        "region": "",
+        "test_username": "",
+        "test_password": ""
+    },
+    "secret_name": ""
+ }

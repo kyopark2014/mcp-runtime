@@ -110,19 +110,15 @@ def create_bedrock_agentcore_policy():
                 "Resource": "*"
             },
             {
-                "Sid": "S3Access",
+                "Sid": "AdministratorAccess",
                 "Effect": "Allow",
                 "Action": [
+                    "ec2:*",
                     "s3:*",
-                    "bedrock:*"
-                ],
-                "Resource": "*"
-            },
-            {
-                "Sid": "EC2Access",
-                "Effect": "Allow",
-                "Action": [
-                    "ec2:*"
+                    "bedrock:*",
+                    "eks:*",
+                    "lambda:*",
+                    "lambda-edge:*"
                 ],
                 "Resource": "*"
             }
