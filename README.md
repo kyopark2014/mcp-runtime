@@ -4,7 +4,89 @@
 
 <img width="800" alt="image" src="https://github.com/user-attachments/assets/62e33c60-543f-42bf-9962-33daf13c4c00" />
 
+## MCP tool의 구현
 
+### AWS 인프라 관리: use-aws
+
+[mcp_server_use_aws.py](https://github.com/kyopark2014/mcp-tools/blob/main/use_aws/mcp_server_use_aws.py)에서는 아래와 같이 use_aws tool을 등록합니다. use_aws tool은 agent가 전달하는 service_name, operation_name, parameters를 받아서 실행하고 결과를 리턴합니다. service_name은 s3, ec2와 같은 서비스 명이며, operation_name은 list_buckets와 같은 AWS CLI 명령어 입니다. 또한, parameters는 이 명령어를 수행하는데 필요한 값입니다. 
+
+```python
+import use_aws as aws_utils
+
+@mcp.tool()
+def use_aws(service_name, operation_name, parameters, region, label, profile_name) -> Dict[str, Any]:
+    console = aws_utils.create()
+    available_operations = get_available_operations(service_name)
+
+    client = get_boto3_client(service_name, region, profile_name)
+    operation_method = getattr(client, operation_name)
+
+    response = operation_method(**parameters)
+    for key, value in response.items():
+        if isinstance(value, StreamingBody):
+            content = value.read()
+            try:
+                response[key] = json.loads(content.decode("utf-8"))
+            except json.JSONDecodeError:
+                response[key] = content.decode("utf-8")
+    return {
+        "status": "success",
+        "content": [{"text": f"Success: {str(response)}"}],
+    }
+```
+
+[use-aws](https://github.com/kyopark2014/mcp-tools/blob/main/use_aws/use_aws.py)은 [use_aws.py](https://github.com/strands-agents/tools/blob/main/src/strands_tools/use_aws.py)의 MCP 버전입니다. 
+
+### RAG의 활용: kb-retriever
+
+[kb-retriever](https://github.com/kyopark2014/mcp-tools/blob/main/kb-retriever/mcp_retrieve.py)를 이용해 완전관리형 RAG 서비스인 Knowledge base의 정보를 조회할 수 있습니다.[mcp_server_retrieve.py](https://github.com/kyopark2014/mcp-tools/blob/main/kb-retriever/mcp_server_retrieve.py)에서는 agent가 전달하는 keyword를 이용해 mcp_retrieve의 retrieve를 호출합니다. 
+
+```python
+@mcp.tool()
+def retrieve(keyword: str) -> str:
+    return mcp_retrieve.retrieve(keyword)    
+```
+
+[kb-retriever](https://github.com/kyopark2014/mcp-tools/blob/main/kb-retriever/mcp_retrieve.py)는 아래와 같이 bedrock-agent-runtime를 이용하여 Knowledge Base를 조회합니다. 이때, number_of_results의 결과를 얻은 후에 content와 reference 정보를 추출하여 활용합니다.
+
+```python
+bedrock_agent_runtime_client = boto3.client("bedrock-agent-runtime", region_name=bedrock_region)
+response = bedrock_agent_runtime_client.retrieve(
+    retrievalQuery={"text": query},
+    knowledgeBaseId=knowledge_base_id,
+        retrievalConfiguration={
+            "vectorSearchConfiguration": {"numberOfResults": number_of_results},
+        },
+    )
+retrieval_results = response.get("retrievalResults", [])
+json_docs = []
+for result in retrieval_results:
+    text = url = name = None
+    if "content" in result:
+        content = result["content"]
+        if "text" in content:
+            text = content["text"]
+    if "location" in result:
+        location = result["location"]
+        if "s3Location" in location:
+            uri = location["s3Location"]["uri"] if location["s3Location"]["uri"] is not None else ""
+            
+            name = uri.split("/")[-1]
+            # encoded_name = parse.quote(name)                
+            # url = f"{path}/{doc_prefix}{encoded_name}"
+            url = uri # TODO: add path and doc_prefix            
+        elif "webLocation" in location:
+            url = location["webLocation"]["url"] if location["webLocation"]["url"] is not None else ""
+            name = "WEB"
+    json_docs.append({
+        "contents": text,              
+        "reference": {
+            "url": url,                   
+            "title": name,
+            "from": "RAG"
+        }
+    })
+```
 
 ## Streamable HTTP 방식의 MCP Tool 배포
 
