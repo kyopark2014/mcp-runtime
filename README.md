@@ -69,11 +69,8 @@ for result in retrieval_results:
     if "location" in result:
         location = result["location"]
         if "s3Location" in location:
-            uri = location["s3Location"]["uri"] if location["s3Location"]["uri"] is not None else ""
-            
+            uri = location["s3Location"]["uri"] if location["s3Location"]["uri"] is not None else ""            
             name = uri.split("/")[-1]
-            # encoded_name = parse.quote(name)                
-            # url = f"{path}/{doc_prefix}{encoded_name}"
             url = uri # TODO: add path and doc_prefix            
         elif "webLocation" in location:
             url = location["webLocation"]["url"] if location["webLocation"]["url"] is not None else ""
