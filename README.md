@@ -158,6 +158,10 @@ headers = {
 
 ## Deployment 방법
 
+AgentCore runtime으로 배포할 때에는 Boto3 API나, AgentCore CLI를 활용할 수 있습니다.
+
+### Boto3 활용
+
 아래와 같이 IAM policy를 생성합니다. 생성된 policy의 이름은 BedrockAgentCoreMCPRoleFor에 project name을 합한 형태입니다.
 
 ```text
