@@ -162,7 +162,7 @@ AgentCore runtime으로 배포할 때에는 Boto3 API나, AgentCore CLI를 활�
 
 ### Boto3 활용
 
-아래와 같이 IAM policy를 생성합니다. 생성된 policy의 이름은 BedrockAgentCoreMCPRoleFor에 project name을 합한 형태입니다.
+생성된 policy의 이름은 BedrockAgentCoreMCPRoleFor에 project name을 합한 형태입니다. config.json.sample을 config.json으로 변경한 후에 필요한 값들을 채워줍니다. 이후 아래와 같이 IAM policy를 생성합니다.
 
 ```text
 python create_iam_policies.py
