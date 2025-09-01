@@ -204,7 +204,7 @@ Boto3를 이용한 API 이외에도 [AgentCore Toolkit](https://github.com/aws/b
 pip install bedrock-agentcore-starter-toolkit
 ```
 
-이후 아래와 설치를 준비합니다. 아래 명령어로 [Dockerfile](./Dockerfile)과 [.bedrock_agentcore.yaml](./.bedrock_agentcore.yaml)이 생성됩니다. 
+이후 아래와 설치를 준비합니다. 아래 명령어로 [Dockerfile](./mcp_server_cli/Dockerfile)과 [.bedrock_agentcore.yaml](./mcp_server_cli/.bedrock_agentcore.yaml)이 생성됩니다. 
 
 ```text
 python setup.py
@@ -237,7 +237,7 @@ MCP 서버는 아래와 같이 실행합니다.
 python mcp_server_use_aws.py
 ```
 
-기본 Client의 실행은 아래와 같습니다. 아래 [mcp_client.py](./mcp_client.py)은 streamable http로 "http://localhost:8000/mcp" 로 연결할 수 있는 MCP 서버의 정보를 가져와 사용할 수 있는 tool에 대한 정보를 제공합니다. 
+기본 Client의 실행은 아래와 같습니다. 아래 [test_mcp_local.py](./runtime/use-aws/test_mcp_local.py)은 streamable http로 "http://localhost:8000/mcp" 로 연결할 수 있는 MCP 서버의 정보를 가져와 사용할 수 있는 tool에 대한 정보를 제공합니다. 
 
 ```text
 python mcp_client.py
