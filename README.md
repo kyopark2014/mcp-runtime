@@ -1,6 +1,6 @@
 # Streamable MCP Tool
 
-여기에서는 [streamable HTTP 방식](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports#streamable-http)의 MCP 서버를 서버리스 환경에서 배포하고 활용하는 방법에 대해 설명합니다. 전체적인 architecture는 아래와 같습니다. 사용자가 [streamlit](https://streamlit.io/)으로 구현된 생성형 AI application을 통해 질문을 입력하면, [LangGraph](https://langchain-ai.github.io/langgraph/) 또는 [Strands](https://strandsagents.com/latest/documentation/docs/) agent가 mutli step reasoning을 통해, Kubernetes로 된 중요한 workload를 조회하거나 관리할 수 있고, 사내의 중요한 데이터를 RAG를 이용해 활용할 수 있습니다. 여기에서는 Knowledge base를 조회하는 [kb-retriever](https://github.com/kyopark2014/mcp-tools/blob/main/runtime/kb-retriever/mcp_retrieve.py)와 AWS 인프라를 관리할 수 있는 [use-aws](./runtime/use_aws/use_aws.py)를 MCP tool로 제공하며, 이 tool들은 AgentCore에 runtime으로 배포됩니다.
+여기에서는 [streamable HTTP 방식](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports#streamable-http)의 MCP 서버를 서버리스 환경에서 배포하고 활용하는 방법에 대해 설명합니다. 전체적인 architecture는 아래와 같습니다. 사용자가 [streamlit](https://streamlit.io/)으로 구현된 생성형 AI application을 통해 질문을 입력하면, [LangGraph](https://langchain-ai.github.io/langgraph/) 또는 [Strands](https://strandsagents.com/latest/documentation/docs/) agent가 mutli step reasoning을 통해, Kubernetes로 된 중요한 workload를 조회하거나 관리할 수 있고, 사내의 중요한 데이터를 RAG를 이용해 활용할 수 있습니다. 여기에서는 Knowledge base를 조회하는 [kb-retriever](./runtime/kb-retriever/mcp_retrieve.py)와 AWS 인프라를 관리할 수 있는 [use-aws](./runtime/use-aws/use-aws.py)를 MCP tool로 제공하며, 이 tool들은 AgentCore에 runtime으로 배포됩니다.
 
 <img width="800" alt="image" src="https://github.com/user-attachments/assets/62e33c60-543f-42bf-9962-33daf13c4c00" />
 
@@ -8,7 +8,7 @@
 
 ### AWS 인프라 관리: use-aws
 
-[mcp_server_use_aws.py](https://github.com/kyopark2014/mcp-tools/blob/main/runtime/use_aws/mcp_server_use_aws.py)에서는 아래와 같이 use_aws tool을 등록합니다. use_aws tool은 agent가 전달하는 service_name, operation_name, parameters를 받아서 실행하고 결과를 리턴합니다. service_name은 s3, ec2와 같은 서비스 명이며, operation_name은 list_buckets와 같은 AWS CLI 명령어 입니다. 또한, parameters는 이 명령어를 수행하는데 필요한 값입니다. 
+[mcp_server_use_aws.py](https://github.com/kyopark2014/mcp-tools/blob/main/runtime/use-aws/mcp_server_use_aws.py)에서는 아래와 같이 use_aws tool을 등록합니다. use_aws tool은 agent가 전달하는 service_name, operation_name, parameters를 받아서 실행하고 결과를 리턴합니다. service_name은 s3, ec2와 같은 서비스 명이며, operation_name은 list_buckets와 같은 AWS CLI 명령어 입니다. 또한, parameters는 이 명령어를 수행하는데 필요한 값입니다. 
 
 ```python
 import use_aws as aws_utils
@@ -35,7 +35,7 @@ def use_aws(service_name, operation_name, parameters, region, label, profile_nam
     }
 ```
 
-[use-aws](https://github.com/kyopark2014/mcp-tools/blob/main/runtime/use_aws/use_aws.py)은 [use_aws.py](https://github.com/strands-agents/tools/blob/main/src/strands_tools/use_aws.py)의 MCP 버전입니다. 
+[use-aws](https://github.com/kyopark2014/mcp-tools/blob/main/runtime/use-aws/use_aws.py)은 [use_aws.py](https://github.com/strands-agents/tools/blob/main/src/strands_tools/use_aws.py)의 MCP 버전입니다. 
 
 ### RAG의 활용: kb-retriever
 
