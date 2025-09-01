@@ -156,7 +156,7 @@ headers = {
 }
 ```
 
-## Deployment 방법
+## AgentCore Runtime
 
 AgentCore runtime으로 배포할 때에는 Boto3 API나, AgentCore CLI를 활용할 수 있습니다.
 
@@ -240,8 +240,31 @@ python mcp_server_use_aws.py
 기본 Client의 실행은 아래와 같습니다. 아래 [test_mcp_local.py](./runtime/use-aws/test_mcp_local.py)은 streamable http로 "http://localhost:8000/mcp" 로 연결할 수 있는 MCP 서버의 정보를 가져와 사용할 수 있는 tool에 대한 정보를 제공합니다. 
 
 ```text
-python mcp_client.py
+python test_mcp_local.py
 ```
+
+
+## AgentCore Gateway
+
+AgentCore의 Gateway를 이용하면 Lambda를 이용해 MCP 서버를 구현할 수 있습니다. 아래와 같이 [create_gateway_role.py](./gateway/kb-retriever/create_gateway_role.py)와 같이 gateway를 위한 IAM role을 생성합니다. 
+
+```text
+python create_gateway_role.py
+```
+
+[create_gateway_tool.py](./gateway/kb-retriever/create_gateway_tool.py)와 같이 gateway에서 실행할 lambda에 대한 role을 생성하고, target을 배포합니다. 이때 기존 lambda가 없는 경우에 새로 생성합니다. 
+
+```text
+python create_gateway_tool.py
+```
+
+아래와 같이 [create_gateway_tool.py](./gateway/kb-retriever/test_mcp_remote.py)을 이용해 MCP 서버에 대한 동작을 테스트 할 수 있습니다.
+
+```text
+python test_mcp_remote.py
+```
+
+
 
 ## 실행 결과
 
