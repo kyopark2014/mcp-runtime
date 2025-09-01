@@ -87,7 +87,7 @@ for result in retrieval_results:
 
 ## Streamable HTTP 방식의 MCP Tool 배포
 
-AgentCore로 배포하기 위해서는 MCP 설정시 [mcp_server_retrieve.py](./runtime/kb-retriever/mcp_server_retrieve.py)와 같이 host를 "0.0.0.0"으로 설정하고 외부로는 [Dockerfile](./kb-retriever/Dockerfile)와 같이 8000 포트를 expose 합니다.
+AgentCore로 배포하기 위해서는 MCP 설정시 [mcp_server_retrieve.py](./runtime/kb-retriever/mcp_server_retrieve.py)와 같이 host를 "0.0.0.0"으로 설정하고 외부로는 [Dockerfile](./runtime/kb-retriever/Dockerfile)와 같이 8000 포트를 expose 합니다.
 
 ```python
 mcp = FastMCP(
