@@ -87,6 +87,8 @@ for result in retrieval_results:
 
 ## AgentCore의 Runtime으로 Streamable HTTP 방식의 MCP Tool 배포
 
+### Runtime 배포 준비
+
 AgentCore로 배포하기 위해서는 MCP 설정시 [mcp_server_retrieve.py](./runtime/kb-retriever/mcp_server_retrieve.py)와 같이 host를 "0.0.0.0"으로 설정하고 외부로는 [Dockerfile](./runtime/kb-retriever/Dockerfile)와 같이 8000 포트를 expose 합니다.
 
 ```python
@@ -156,7 +158,7 @@ headers = {
 }
 ```
 
-### AgentCore Runtime 배포 방법
+### Runtime 배포 방법
 
 AgentCore runtime으로 배포할 때에는 Boto3 API나, AgentCore CLI를 활용할 수 있습니다.
 
@@ -341,9 +343,9 @@ python test_mcp_remote.py
 ```
 
 
-### use-aws
+### use-aws 관련 패키지 설치
 
-use-aws를 위해 [lambda folder](./gateway/use-aws/lambda-use-aws-for-mcp)에서는 colorama, rich, typing_extensions를 설치하여야 합니다.
+[lambda folder](./gateway/use-aws/lambda-use-aws-for-mcp)에 use-aws를 위한 colorama, rich, typing_extensions를 설치하여야 합니다.
 
 
 ## 실행 결과
