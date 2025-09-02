@@ -302,7 +302,7 @@ role_arn = response['Role']['Arn']
 python create_gateway_tool.py
 ```
 
-Gateway에 배포를 위해서는 bearer token이 필요합니다. 이 token은 먼저 secret에 이미 저장된 값을 먼저 쓰고, 403같은 에러가 발생하면 Cognito를 접속해서 업데이트 합니다. 여기서는 편의상 secret_name으로 아래와 같이 project 이름을 이용하므로, gatway의 모든 target은 같은 secret을 이용합니다. 
+Gateway에 배포를 위해서는 bearer token이 필요합니다. 이 token은 먼저 secret에 이미 저장된 값을 먼저 쓰고, 403같은 에러가 발생하면 Cognito를 접속해서 업데이트 합니다. 여기서는 편의상 secret_name으로 아래와 같이 project 이름을 이용하므로, gateway의 모든 target은 같은 secret을 이용합니다. 
 
 ```python
 secret_name = f'{projectName.lower()}/credentials'
