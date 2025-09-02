@@ -170,7 +170,7 @@ AgentCore runtime으로 배포할 때에는 Boto3 API나, AgentCore CLI를 활�
 python create_iam_policies.py
 ```
 
-MCP server 인증시 사용할 bearer token을 등록합니다. 여기서는 Cognito의 access token으로 bearer token을 생성하고 secret manager에 등록합니다. 상세 코드는 [create_bearer_token.py](./runtime/kb-retrievercreate_bearer_token.py)를 참조합니다. 
+MCP server 인증시 사용할 bearer token을 등록합니다. 여기서는 Cognito의 access token으로 bearer token을 생성하고 secret manager에 등록합니다. 상세 코드는 [create_bearer_token.py](./runtime/kb-retriever/create_bearer_token.py)를 참조합니다. 
 
 ```text
 python create_bearer_token.py
