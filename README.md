@@ -164,31 +164,31 @@ AgentCore runtime으로 배포할 때에는 Boto3 API나, AgentCore CLI를 활�
 
 #### Boto3 API
 
-생성된 policy의 이름은 BedrockAgentCoreMCPRoleFor에 project name을 합한 형태입니다. config.json.sample을 config.json으로 변경한 후에 필요한 값들을 채워줍니다. 이후 아래와 같이 IAM policy를 생성합니다.
+생성된 policy의 이름은 BedrockAgentCoreMCPRoleFor에 project name을 합한 형태입니다. config.json.sample을 config.json으로 변경한 후에 필요한 값들을 채워줍니다. 이후 아래와 같이 IAM policy를 생성합니다. 상세코드는 [create_iam_policies.py](./runtime/kb-retriever/create_iam_policies.py)을 참조합니다. 
 
 ```text
 python create_iam_policies.py
 ```
 
-MCP server 인증시 사용할 bearer token을 등록합니다. 여기서는 Cognito의 access token으로 bearer token을 생성하고 secret manager에 등록합니다.
+MCP server 인증시 사용할 bearer token을 등록합니다. 여기서는 Cognito의 access token으로 bearer token을 생성하고 secret manager에 등록합니다. 상세 코드는 [create_bearer_token.py](./runtime/kb-retirever/create_bearer_token.py)를 참조합니다. 
 
 ```text
 python create_bearer_token.py
 ```
 
-MCP runtime을 생성하기 위해 ECR에 이미지를 푸쉬합니다.
+MCP runtime을 생성하기 위해 ECR에 이미지를 푸쉬합니다. 상세 배치파일 내용은 [push-to-ecr.sh](./runtime/kb-retirever/push-to-ecr.sh)을 참조합니다.
 
 ```text
 ./push-to-ecr.sh
 ```
 
-이제 AgentCore에 MCP runtime을 생성합니다.
+이제 AgentCore에 MCP runtime을 생성합니다. 상세 코드는 [create_mcp_runtime.py](./runtime/kb-retirever/create_mcp_runtime.py)을 참조합니다.
 
 ```text
 python create_mcp_runtime.py
 ```
 
-배포가 정상적으로 되었는지 아래와 같이 확인할 수 있습니다.
+배포가 정상적으로 되었는지 아래와 같이 확인할 수 있습니다. 상세 코드는 [test_mcp_remote.py](./runtime/kb-retirever/test_mcp_remote.py)을 참조합니다.
 
 ```text
 python test_mcp_remote.py
