@@ -252,6 +252,24 @@ AgentCore의 Gateway를 이용하면 Lambda를 이용해 MCP 서버를 구현할
 python create_gateway_role.py
 ```
 
+[tool_spec.json](./gateway/kb-retriever/tool_spec.json)에 사용할 tool에 대한 Spec을 업데이트 합니다. kb-retriever의 경우에 keyword를 검색하므로 아래와 같이 설정합니다.
+
+```java
+{
+    "name": "retrieve",
+    "description": "keyword to retrieve the knowledge base",
+    "inputSchema": {
+        "type": "object",
+        "properties": {
+            "keyword": {
+                "type": "string"
+            }
+        },
+        "required": ["keyword"]
+    }
+}
+```
+
 [create_gateway_tool.py](./gateway/kb-retriever/create_gateway_tool.py)와 같이 gateway에서 실행할 lambda에 대한 role을 생성하고, target을 배포합니다. 이때 기존 lambda가 없는 경우에 새로 생성합니다. 
 
 ```text
@@ -264,6 +282,10 @@ python create_gateway_tool.py
 python test_mcp_remote.py
 ```
 
+
+### use-aws
+
+use-aws를 위해 [lambda folde](./gateway/use-aws/lambda-use-aws-for-mcp)에서는 colorama, rich, typing_extensions를 설치하여야 합니다.
 
 
 ## 실행 결과
