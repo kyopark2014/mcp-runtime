@@ -315,7 +315,7 @@ token_data = json.loads(bearer_token_raw)
 bearer_token = token_data['bearer_token']
 ```
 
-인증에 필요한 client_id는 생성할때 config.json에 저장하거나 아래와 같이 client_name을 이용해 검색해서 사용할 수 있습니다. 
+인증에 필요한 client_id는 생성할때 config.json에 저장했다가 사용하거나 아래와 같이 client_name을 이용해 검색해서 사용할 수 있습니다. 
 
 ```python
 gateway_client = boto3.client('bedrock-agentcore-control', region_name=region)
