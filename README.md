@@ -253,9 +253,9 @@ python test_mcp_local.py
 
 AgentCore의 Gateway를 이용하면 Lambda로 Streamable HTTP 방식의 MCP 서버를 만들어 편리하게 이용할 수 있습니다. 
 
-### Agentic Gateway의 Role 생성
+### AgentCore Gateway의 Role 생성
 
-[create_gateway_role.py](./gateway/kb-retriever/create_gateway_role.py)를 이용해 아래와 같이 Agentic Gateway를 위한 Role을 배포할 수 있습니다.
+[create_gateway_role.py](./gateway/kb-retriever/create_gateway_role.py)를 이용해 아래와 같이 AgentCore Gateway를 위한 Role을 배포할 수 있습니다.
 
 ```text
 python create_gateway_role.py
@@ -292,9 +292,9 @@ role_arn = response['Role']['Arn']
 ```
 
 
-### Agentic Gateway의 Tool 배포
+### AgentCore Gateway를 이용해 MCP 서버 배포하기
 
-#### Gateway에 Tool을 배포하기
+#### AgentCore Gateway 생성
 
 [create_gateway_tool.py](./gateway/kb-retriever/create_gateway_tool.py)를 이용해 MCP server인 target을 AgentCore Gateway에 배포할 수 있습니다.
 
