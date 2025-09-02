@@ -253,6 +253,99 @@ python test_mcp_local.py
 
 ### Agentic Gateway의 Tool 배포
 
+Lambda 폴더의 code들을 배포하기 위해 아래와 같이 먼저 압축을 합니다. 이후 아래와 같이 기 생성한 lambda role과 zip 파일의 코드를 이용해 lambda를 생성합니다. 
+
+```python
+os.makedirs(lambda_function_path)
+create_dummpy_lambda_function(lambda_function_path)
+
+with zipfile.ZipFile(lambda_function_zip_path, 'w', zipfile.ZIP_DEFLATED) as zip_file:     
+    for root, dirs, files in os.walk(lambda_dir):
+        for file in files:
+            if file == 'lambda_function.zip':
+                continue
+            file_path = os.path.join(root, file)
+            arcname = os.path.relpath(file_path, lambda_dir)
+            zip_file.write(file_path, arcname)
+
+lambda_client = boto3.client('lambda', region_name=region)
+response = lambda_client.create_function(
+    FunctionName=lambda_function_name,
+    Runtime='python3.13',
+    Handler='lambda_function.lambda_handler',
+    Role=lambda_function_role,
+    Description=f'Lambda function for {lambda_function_name}',
+    Timeout=60,
+    Code={
+        'ZipFile': open(lambda_function_zip_path, 'rb').read()
+    }
+)
+lambda_function_arn = response['FunctionArn']
+```
+
+[lambda_function.py](./gateway/kb-retriever/lambda-kb-retriever-for-mcp/lambda_function.py)와 같이 lambda_handler은 context를 파싱하여 tool 정보와 입력 변수를 추출합니다. 이때 아래와 같이 사용하려는 tool name에 맵핑이 될 때 관련된 함수를 호출합니다. 
+
+```python
+def lambda_handler(event, context):
+    toolName = context.client_context.custom['bedrockAgentCoreToolName']
+    
+    delimiter = "___"
+    if delimiter in toolName:
+        toolName = toolName[toolName.index(delimiter) + len(delimiter):]
+
+    keyword = event.get('keyword')
+    if toolName == 'retrieve':
+        result = retrieve(keyword)
+        return {
+            'statusCode': 200, 
+            'body': result
+        }
+```
+
+이때 tool의 함수의 예는 아래와 같습니다. 아래와 같이 bedrock_agent_runtime_client의 retrieve를 이용해 관련된 문서를 찾은 후에 json 포맷으로 리턴합니다.
+
+```python
+knowledge_base_id = "1CMBJP5NME"
+number_of_results = 5
+
+bedrock_agent_runtime_client = boto3.client("bedrock-agent-runtime")
+def retrieve(query: str) -> str:
+    response = bedrock_agent_runtime_client.retrieve(
+        retrievalQuery={"text": query},
+        knowledgeBaseId=knowledge_base_id,
+            retrievalConfiguration={
+                "vectorSearchConfiguration": {"numberOfResults": number_of_results},
+            },
+        )    
+    retrieval_results = response.get("retrievalResults", [])
+    json_docs = []
+    for result in retrieval_results:
+        text = url = name = None
+        if "content" in result:
+            content = result["content"]
+            if "text" in content:
+                text = content["text"]
+
+        if "location" in result:
+            location = result["location"]
+            if "s3Location" in location:
+                uri = location["s3Location"]["uri"] if location["s3Location"]["uri"] is not None else ""                
+                name = uri.split("/")[-1]                
+            elif "webLocation" in location:
+                url = location["webLocation"]["url"] if location["webLocation"]["url"] is not None else ""
+                name = "WEB"
+        json_docs.append({
+            "contents": text,              
+            "reference": {
+                "url": url,                   
+                "title": name,
+                "from": "RAG"
+            }
+        })
+    return json.dumps(json_docs, ensure_ascii=False)
+```
+
+
 #### Tool Spec: use-aws
 
 AWS CLI를 이용해 AWS 인프라를 생성 및 관리하는 tool인 use-aws를 위해 아래와 같이 Tool Spec을 정의할 수 있습니다.
