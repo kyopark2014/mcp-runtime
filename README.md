@@ -1,6 +1,6 @@
 # Streamable MCP Tool
 
-여기에서는 [streamable HTTP 방식](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports#streamable-http)의 MCP 서버를 서버리스 환경에서 배포하고 활용하는 방법에 대해 설명합니다. 전체적인 architecture는 아래와 같습니다. 사용자가 [streamlit](https://streamlit.io/)으로 구현된 생성형 AI application을 통해 질문을 입력하면, [LangGraph](https://langchain-ai.github.io/langgraph/) 또는 [Strands](https://strandsagents.com/latest/documentation/docs/) agent가 mutli step reasoning을 통해, Kubernetes로 된 중요한 workload를 조회하거나 관리할 수 있고, 사내의 중요한 데이터를 RAG를 이용해 활용할 수 있습니다. 여기에서는 Knowledge base를 조회하는 [kb-retriever](./runtime/kb-retriever/mcp_retrieve.py)와 AWS 인프라를 관리할 수 있는 [use-aws](./runtime/use-aws/use_aws.py)를 MCP tool로 제공하며, 이 tool들은 AgentCore에 runtime으로 배포됩니다.
+여기에서는 [streamable HTTP 방식](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports#streamable-http)의 MCP 서버를 서버리스 환경에서 배포하고 활용하는 방법에 대해 설명합니다. 전체적인 architecture는 아래와 같습니다. 사용자가 [streamlit](https://streamlit.io/)으로 구현된 생성형 AI application을 통해 질문을 입력하면, [LangGraph](https://langchain-ai.github.io/langgraph/) 또는 [Strands](https://strandsagents.com/latest/documentation/docs/) agent가 mutli step reasoning을 통해, Kubernetes로 된 중요한 workload를 조회하거나 관리할 수 있고, 사내의 중요한 데이터를 RAG를 이용해 활용할 수 있습니다. 여기에서는 Knowledge base를 조회하는 [kb-retriever](./runtime/kb-retriever/mcp_retrieve.py)와 AWS 인프라를 관리할 수 있는 [use-aws](./runtime/use-aws/use_aws.py)를 MCP tool로 제공하며, 이 tool들은 AgentCore에 runtime 또는 AgentCore Gateway로 배포됩니다.
 
 <img width="800" alt="image" src="https://github.com/user-attachments/assets/62e33c60-543f-42bf-9962-33daf13c4c00" />
 
@@ -85,7 +85,7 @@ for result in retrieval_results:
     })
 ```
 
-## Streamable HTTP 방식의 MCP Tool 배포
+## AgentCore의 Runtime으로 Streamable HTTP 방식의 MCP Tool 배포
 
 AgentCore로 배포하기 위해서는 MCP 설정시 [mcp_server_retrieve.py](./runtime/kb-retriever/mcp_server_retrieve.py)와 같이 host를 "0.0.0.0"으로 설정하고 외부로는 [Dockerfile](./runtime/kb-retriever/Dockerfile)와 같이 8000 포트를 expose 합니다.
 
@@ -156,11 +156,11 @@ headers = {
 }
 ```
 
-## AgentCore Runtime
+### AgentCore Runtime 배포 방법
 
 AgentCore runtime으로 배포할 때에는 Boto3 API나, AgentCore CLI를 활용할 수 있습니다.
 
-### Boto3 활용
+#### Boto3 API
 
 생성된 policy의 이름은 BedrockAgentCoreMCPRoleFor에 project name을 합한 형태입니다. config.json.sample을 config.json으로 변경한 후에 필요한 값들을 채워줍니다. 이후 아래와 같이 IAM policy를 생성합니다.
 
@@ -196,7 +196,7 @@ python test_mcp_remote.py
 
 <img width="600" alt="noname" src="https://github.com/user-attachments/assets/5bc2ce14-5ad5-43b2-a6f4-2a359b76bfe4" />
 
-### AgentCore CLI 활용 방법
+#### AgentCore CLI 활용 방법
 
 Boto3를 이용한 API 이외에도 [AgentCore Toolkit](https://github.com/aws/bedrock-agentcore-starter-toolkit)을 이용해 배포할 수 있습니다.
 
@@ -229,7 +229,7 @@ agentcore launch
 agentcore invoke '{"prompt": "Hello from Bedrock AgentCore!"}'
 ```
 
-### Local Test
+#### Local Test
 
 MCP 서버는 아래와 같이 실행합니다.
 
@@ -244,13 +244,63 @@ python test_mcp_local.py
 ```
 
 
-## AgentCore Gateway
 
-AgentCore의 Gateway를 이용하면 Lambda를 이용해 MCP 서버를 구현할 수 있습니다. 아래와 같이 [create_gateway_role.py](./gateway/kb-retriever/create_gateway_role.py)와 같이 gateway를 위한 IAM role을 생성합니다. 
+## AgentCore의 Gateway를 이용하여 Streamable HTTP 방식의 MCP Tool 배포
 
-```text
-python create_gateway_role.py
+### Agentic Gateway의 Role 배포
+
+### Agentic Gateway의 Tool 배포
+
+#### Tool Spec: use-aws
+
+AWS CLI를 이용해 AWS 인프라를 생성 및 관리하는 tool인 use-aws를 위해 아래와 같이 Tool Spec을 정의할 수 있습니다.
+
+```java
+{
+    "name": "use_aws",
+    "description": "Make a boto3 client call with the specified service, operation, and parameters. Boto3 operations are snake_case.",
+    "inputSchema": {
+        "type": "object",
+        "properties": {
+            "service_name": {
+                "type": "string",
+                "description": "The name of the AWS service"
+            },
+            "operation_name": {
+                "type": "string",
+                "description": "The name of the operation to perform"
+            },
+            "parameters": {
+                "type": "object",
+                "description": "The parameters for the operation"
+            },
+            "region": {
+                "type": "string",
+                "description": "Region name for calling the operation on AWS boto3"
+            },
+            "label": {
+                "type": "string",
+                "description": "Label of AWS API operations human readable explanation. This is useful for communicating with human."
+            },
+            "profile_name": {
+                "type": "string",
+                "description": "Optional: AWS profile name to use from ~/.aws/credentials. Defaults to default profile if not specified."
+            }
+        },
+        "required": [
+            "region",
+            "service_name",
+            "operation_name",
+            "parameters",
+            "label"
+        ]
+    }
+}
 ```
+
+#### Tool Spec: kb-retirever
+
+kb-retirever는 Knowledge Base를 이용하여 검색을 수행합니다. 따라서 아래와 같이 검색어를 위한 string 형태의 keyword가 필요합니다. Tool 선택에 필요한 조건은 description에 기술합니다. 
 
 [tool_spec.json](./gateway/kb-retriever/tool_spec.json)에 사용할 tool에 대한 Spec을 업데이트 합니다. kb-retriever의 경우에 keyword를 검색하므로 아래와 같이 설정합니다.
 
@@ -268,6 +318,14 @@ python create_gateway_role.py
         "required": ["keyword"]
     }
 }
+```
+
+### 배포 방법
+
+AgentCore의 Gateway를 이용하면 Lambda를 이용해 MCP 서버를 구현할 수 있습니다. 여기에서는 Role 및 Tool을 배포하는 2가지의 python 파일을 이용하여 Runtime Gateway에 배포를 수행합니다. [create_gateway_role.py](./gateway/kb-retriever/create_gateway_role.py)와 같이 gateway를 위한 IAM role을 생성합니다. 
+
+```text
+python create_gateway_role.py
 ```
 
 [create_gateway_tool.py](./gateway/kb-retriever/create_gateway_tool.py)와 같이 gateway에서 실행할 lambda에 대한 role을 생성하고, target을 배포합니다. 이때 기존 lambda가 없는 경우에 새로 생성합니다. 
