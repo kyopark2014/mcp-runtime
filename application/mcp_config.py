@@ -41,6 +41,61 @@ def get_bearer_token(secret_name):
         print(f"Error getting stored token: {e}")
         return None
 
+gateway_url = ""
+bearer_token = ""
+
+def get_bearer_token_from_secret_manager(secret_name):
+    try:
+        session = boto3.Session()
+        client = session.client('secretsmanager', region_name=region)
+        response = client.get_secret_value(SecretId=secret_name)
+        bearer_token_raw = response['SecretString']
+        
+        token_data = json.loads(bearer_token_raw)        
+        if 'bearer_token' in token_data:
+            bearer_token = token_data['bearer_token']
+            return bearer_token
+        else:
+            logger.info("No bearer token found in secret manager")
+            return None
+    
+    except Exception as e:
+        logger.info(f"Error getting stored token: {e}")
+        return None
+
+def retrieve_bearer_token(secret_name):
+    secret_name = config['secret_name']
+    bearer_token = get_bearer_token_from_secret_manager(secret_name)
+    logger.info(f"Bearer token from secret manager: {bearer_token[:100] if bearer_token else 'None'}...")
+
+    # verify bearer token
+    try:
+        client = boto3.client('cognito-idp', region_name=region)
+        response = client.get_user(
+            AccessToken=bearer_token
+        )
+        logger.info(f"response: {response}")
+
+        username = response['Username']
+        logger.info(f"Username: {username}")
+
+    except Exception as e:
+        logger.info(f"Error verifying bearer token: {e}")
+
+        # Try to get fresh bearer token from Cognito
+        logger.info("Error verifying bearer token, getting fresh bearer token from Cognito...")
+        bearer_token = create_cognito_bearer_token(config)
+        logger.info(f"Bearer token from cognito: {bearer_token[:100] if bearer_token else 'None'}...")
+        
+        if bearer_token:
+            secret_name = config['secret_name']
+            save_bearer_token(secret_name, bearer_token)
+        else:
+            logger.info("Failed to get bearer token from Cognito. Exiting.")
+            return {}
+        
+    return bearer_token
+
 def save_bearer_token(secret_name, bearer_token):
     try:        
         session = boto3.Session()
@@ -129,15 +184,36 @@ def get_agent_runtime_arn(mcp_type: str):
             return agentRuntime["agentRuntimeArn"]
     return None
 
+def get_gateway_url():
+    gateway_client = boto3.client('bedrock-agentcore-control', region_name=region)
+    response = gateway_client.list_gateways(maxResults=60)
+    gateway_name = config['projectName']
+    for gateway in response['items']:
+        if gateway['name'] == gateway_name:
+            print(f"gateway: {gateway}")
+            gateway_id = gateway.get('gatewayId')
+            config['gateway_id'] = gateway_id
+            break
+    gateway_url = f'https://{gateway_id}.gateway.bedrock-agentcore.{region}.amazonaws.com/mcp'
+    logger.info(f"gateway_url: {gateway_url}")
+
+    return gateway_url
+
 def load_config(mcp_type):
+    global bearer_token, gateway_url
+
     if mcp_type == "use_aws (docker)":
         mcp_type = "use_aws_docker"
-    elif mcp_type == "use_aws (streamable)":
+    elif mcp_type == "use_aws (runtime)":
         mcp_type = "use_aws"
     elif mcp_type == "kb-retriever (docker)":
         mcp_type = "kb-retriever_docker"
-    elif mcp_type == "kb-retriever (streamable)":        
+    elif mcp_type == "kb-retriever (runtime)":        
         mcp_type = "kb-retriever"
+    elif mcp_type == "kb-retriever (runtime)":        
+        mcp_type = "kb-retriever"
+    elif mcp_type == "agentcore gateway":
+        mcp_type = "agentcore gateway"
     
     if mcp_type == "basic":
         return {
@@ -246,6 +322,26 @@ def load_config(mcp_type):
                 }
             }
         }
+    
+    elif mcp_type == "agentcore gateway":                    
+        bearer_token = retrieve_bearer_token(config['secret_name'])
+        if not gateway_url:            
+            gateway_url = get_gateway_url()
+
+        return {
+            "mcpServers": {
+                "agentcore-gateway": {
+                    "type": "streamable_http",
+                    "url": gateway_url,
+                    "headers": {
+                        "Authorization": f"Bearer {bearer_token}",
+                        "Content-Type": "application/json",
+                        "Accept": "application/json, text/event-stream"
+                    }
+                }
+            }
+        }
+
     elif mcp_type == "사용자 설정":
         return mcp_user_config
 

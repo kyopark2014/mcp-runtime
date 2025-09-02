@@ -279,13 +279,25 @@ async def main():
                                 
                 # Test retrieve function
                 print("\n=== Testing retrieve function ===")
+
+                # 내 S3 현황은?
                 params = {
-                    "keyword": "보일러 에러 코드"
+                    "service_name": "s3",
+                    "operation_name": "list_buckets",
+                    "parameters": {},
+                    "region": "us-west-2",
+                    "label": "S3 버킷 목록 조회"
                 }
                 
                 try:
                     targret_name = config['target_name']
-                    tool_name = f"{targret_name}___retrieve"
+
+                    script_dir = os.path.dirname(os.path.abspath(__file__))
+                    tool_spec = json.load(open(os.path.join(script_dir, "tool_spec.json")))
+                    name = tool_spec['name']
+
+                    tool_name = f"{targret_name}___{name.replace('-', '_')}"
+                    print(f"tool_name: {tool_name}")
 
                     result = await asyncio.wait_for(session.call_tool(tool_name, params), timeout=30)
                     print(f"retrieve result: {result}")

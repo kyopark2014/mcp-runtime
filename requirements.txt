@@ -2,3 +2,6 @@ strands-agents
 strands-agents-tools
 mcp
 langchain_mcp_adapters
+colorama
+rich
+typing_extensions

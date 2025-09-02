@@ -650,6 +650,7 @@ def update_lambda_function_arn():
                     Handler='lambda_function.lambda_handler',
                     Role=lambda_function_role,
                     Description=f'Lambda function for {lambda_function_name}',
+                    Timeout=60,
                     Code={
                         'ZipFile': open(lambda_function_zip_path, 'rb').read()
                     }
@@ -661,14 +662,23 @@ def update_lambda_function_arn():
                 return None
     
     if need_update:
-        # update lambda
+        # update lambda code
         response = lambda_client.update_function_code(
             FunctionName=lambda_function_name,
             ZipFile=open(lambda_function_zip_path, 'rb').read()
         )
-        print(f"✓ Lambda function updated successfully: {response['FunctionArn']}")
         lambda_function_arn = response['FunctionArn']
-        print(f"✓ Lambda function updated successfully: {lambda_function_arn}")
+        print(f"✓ Lambda function code updated successfully: {lambda_function_arn}")
+        
+        # update lambda configuration (timeout)
+        try:
+            lambda_client.update_function_configuration(
+                FunctionName=lambda_function_name,
+                Timeout=60
+            )
+            print(f"✓ Lambda function timeout updated to 60 seconds")
+        except Exception as e:
+            print(f"Warning: Failed to update Lambda timeout: {e}")
 
     # update config
     if lambda_function_arn:
