@@ -285,7 +285,7 @@ python test_mcp_remote.py
 
 ### use-aws
 
-use-aws를 위해 [lambda folde](./gateway/use-aws/lambda-use-aws-for-mcp)에서는 colorama, rich, typing_extensions를 설치하여야 합니다.
+use-aws를 위해 [lambda folder](./gateway/use-aws/lambda-use-aws-for-mcp)에서는 colorama, rich, typing_extensions를 설치하여야 합니다.
 
 
 ## 실행 결과
