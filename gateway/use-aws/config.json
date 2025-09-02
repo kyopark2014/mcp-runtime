@@ -1,0 +1,21 @@
+{
+  "region": "us-west-2",
+  "accountId": "262976740991",
+  "projectName": "mcp",
+  "agentcore_gateway_iam_role": "arn:aws:iam::262976740991:role/AgentCoreGatewayRoleFormcp",
+  "cognito": {
+    "user_pool_name": "mcp-agentcore-user-pool",
+    "user_pool_id": "us-west-2_eDTQixe8T",
+    "client_name": "mcp-agentcore-client",
+    "client_id": "2slq62fna87mfrgd706mha5ohm",
+    "test_username": "mcp-test-user@example.com",
+    "test_password": "TestPassword123!"
+  },
+  "secret_name": "mcp/credentials",
+  "gateway_name": "mcp",
+  "gateway_id": "mcp-fmknfk3r6o",
+  "gateway_url": "https://mcp-fmknfk3r6o.gateway.bedrock-agentcore.us-west-2.amazonaws.com/mcp",
+  "lambda_function_arn": "arn:aws:lambda:us-west-2:262976740991:function:lambda-use-aws-for-mcp",
+  "target_name": "use-aws",
+  "target_id": "1W7EWKWJYE"
+}

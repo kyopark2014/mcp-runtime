@@ -354,6 +354,122 @@ def create_lambda_function_policy(lambda_function_name):
         print(f"Policy creation failed: {e}")
         return None
 
+knowledge_base_id = "1CMBJP5NME"
+number_of_results = 5
+
+bedrock_agent_runtime_client = boto3.client("bedrock-agent-runtime")
+
+def retrieve(query: str) -> str:
+    response = bedrock_agent_runtime_client.retrieve(
+        retrievalQuery={"text": query},
+        knowledgeBaseId=knowledge_base_id,
+            retrievalConfiguration={
+                "vectorSearchConfiguration": {"numberOfResults": number_of_results},
+            },
+        )
+    
+    # print(f"response: {response}")
+    retrieval_results = response.get("retrievalResults", [])
+    # print(f"retrieval_results: {retrieval_results}")
+
+    json_docs = []
+    for result in retrieval_results:
+        text = url = name = None
+        if "content" in result:
+            content = result["content"]
+            if "text" in content:
+                text = content["text"]
+
+        if "location" in result:
+            location = result["location"]
+            if "s3Location" in location:
+                uri = location["s3Location"]["uri"] if location["s3Location"]["uri"] is not None else ""
+                
+                name = uri.split("/")[-1]
+                # encoded_name = parse.quote(name)                
+                # url = f"{path}/{doc_prefix}{encoded_name}"
+                url = uri # TODO: add path and doc_prefix
+                
+            elif "webLocation" in location:
+                url = location["webLocation"]["url"] if location["webLocation"]["url"] is not None else ""
+                name = "WEB"
+
+        json_docs.append({
+            "contents": text,              
+            "reference": {
+                "url": url,                   
+                "title": name,
+                "from": "RAG"
+            }
+        })
+    print(f"json_docs: {json_docs}")
+
+    return json.dumps(json_docs, ensure_ascii=False)
+
+def lambda_handler(event, context):
+    print(f"event: {event}")
+    print(f"context: {context}")
+
+    toolName = context.client_context.custom['bedrockAgentCoreToolName']
+    print(f"context.client_context: {context.client_context}")
+    print(f"Original toolName: {toolName}")
+    
+    delimiter = "___"
+    if delimiter in toolName:
+        toolName = toolName[toolName.index(delimiter) + len(delimiter):]
+    print(f"Converted toolName: {toolName}")
+
+    keyword = event.get('keyword')
+    print(f"keyword: {keyword}")
+
+    if toolName == 'retrieve':
+        result = retrieve(keyword)
+        print(f"result: {result}")
+        return {
+            'statusCode': 200, 
+            'body': result
+        }
+    else:
+        return {
+            'statusCode': 200, 
+            'body': f"{toolName} is not supported"
+        }
+
+def create_dummpy_lambda_function(lambda_function_path: str):
+    body = """import json
+import boto3
+import os
+
+def lambda_handler(event, context):
+    print(f"event: {event}")
+    print(f"context: {context}")
+
+    toolName = context.client_context.custom['bedrockAgentCoreToolName']
+    print(f"context.client_context: {context.client_context}")
+    print(f"Original toolName: {toolName}")
+    
+    delimiter = "___"
+    if delimiter in toolName:
+        toolName = toolName[toolName.index(delimiter) + len(delimiter):]
+    print(f"Converted toolName: {toolName}")
+
+    keyword = event.get('keyword')
+    print(f"keyword: {keyword}")
+
+    if toolName == 'retrieve':
+        return {
+            'statusCode': 200, 
+            'body': f"{toolName} is supported"
+        }
+    else:
+        return {
+            'statusCode': 200, 
+            'body': f"{toolName} is not supported"
+        }"""
+    
+    with open(os.path.join(lambda_function_path, 'lambda_function.py'), 'w') as f:
+        f.write(body)    
+
 def create_trust_policy_for_lambda():
     """Create trust policy for Bedrock AgentCore"""
     
@@ -467,18 +583,40 @@ def update_lambda_function_arn():
     # zip lambda
     lambda_function_name = 'lambda-' + current_folder_name + '-for-' + config['projectName']
     lambda_function_zip_path = os.path.join(script_dir, lambda_function_name, "lambda_function.zip")
-    
+    lambda_dir = os.path.join(script_dir, lambda_function_name)
     # Create zip with all files and folders recursively
-    with zipfile.ZipFile(lambda_function_zip_path, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-        lambda_dir = os.path.join(script_dir, lambda_function_name)
-        for root, dirs, files in os.walk(lambda_dir):
-            for file in files:
-                if file == 'lambda_function.zip':
-                    continue
-                file_path = os.path.join(root, file)
-                arcname = os.path.relpath(file_path, lambda_dir)
-                zip_file.write(file_path, arcname)
-    print(f"✓ Lambda function zip created successfully: {lambda_function_zip_path}")
+    try:
+        with zipfile.ZipFile(lambda_function_zip_path, 'w', zipfile.ZIP_DEFLATED) as zip_file:            
+            for root, dirs, files in os.walk(lambda_dir):
+                for file in files:
+                    if file == 'lambda_function.zip':
+                        continue
+                    file_path = os.path.join(root, file)
+                    arcname = os.path.relpath(file_path, lambda_dir)
+                    zip_file.write(file_path, arcname)
+        print(f"✓ Lambda function zip created successfully: {lambda_function_zip_path}")
+    except Exception as e:
+        print(f"Failed to create Lambda function zip: {e}")
+
+        # initiate lambda_function.py
+        lambda_function_path = os.path.join(script_dir, lambda_function_name)
+        if not os.path.exists(lambda_function_path):
+            print(f"Lambda function path not found, creating new lambda function path: {lambda_function_path}")
+            os.makedirs(lambda_function_path)
+
+            create_dummpy_lambda_function(lambda_function_path)
+            print(f"✓ Lambda function path created successfully: {lambda_function_path}")
+
+            with zipfile.ZipFile(lambda_function_zip_path, 'w', zipfile.ZIP_DEFLATED) as zip_file:     
+                for root, dirs, files in os.walk(lambda_dir):
+                    for file in files:
+                        if file == 'lambda_function.zip':
+                            continue
+                        file_path = os.path.join(root, file)
+                        arcname = os.path.relpath(file_path, lambda_dir)
+                        zip_file.write(file_path, arcname)
+            print(f"✓ Lambda function zip created successfully: {lambda_function_zip_path}")
+        pass
 
     lambda_function_arn = config.get('lambda_function_arn')    
     lambda_client = boto3.client('lambda', region_name=region)
@@ -730,9 +868,9 @@ def main():
                 target_id = target['targetId']
                 break
         
-        if not target_id:            
-            print("Creating lambda target...")
+        if not target_id:       
             TOOL_SPEC = json.load(open(os.path.join(script_dir, "tool_spec.json")))     
+            print("Creating lambda target...")
             lambda_target_config = {
                 "mcp": {
                     "lambda": {
