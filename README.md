@@ -249,11 +249,115 @@ python test_mcp_local.py
 
 ## AgentCore의 Gateway를 이용하여 Streamable HTTP 방식의 MCP Tool 배포
 
-### Agentic Gateway의 Role 배포
+AgentCore의 Gateway를 이용하면 Lambda를 이용해 MCP 서버를 구현할 수 있습니다. 
+
+### Agentic Gateway의 Role 생성
+
+[create_gateway_role.py](./gateway/kb-retriever/create_gateway_role.py)를 이용해 아래와 같이 Agentic Gateway를 위한 Role을 배포할 수 있습니다.
+
+```text
+python create_gateway_role.py
+```
+
+이때 동작은 Policy와 Role을 순차적으로 생성하고 config.json에 관련된 정보를 업데이트하는 과정을 수행합니다. Policy에는 Lambda, AgentCore, Secret, Cognito, ECR, CloudWatch에 대한 권한을 포함하여야 합니다. 상세한 권한은 [create_gateway_role.py](./gateway/kb-retriever/create_gateway_role.py)을 참조합니다. 
+
+Policy 생성의 상세 코드는 아래와 같습니다. 
+
+```python
+iam_client = boto3.client('iam')
+response = iam_client.create_policy(
+    PolicyName=policy_name,
+    PolicyDocument=json.dumps(policy_document),
+    Description=policy_description
+)
+return response['Policy']['Arn']
+```
+
+생성된 policy로 아래와 같이 role을 생성합니다.
+
+```python
+iam_client = boto3.client('iam')
+response = iam_client.create_role(
+    RoleName=role_name,
+    AssumeRolePolicyDocument=json.dumps(trust_policy),
+    Description="Role for Bedrock AgentCore MCP access"
+)
+iam_client.attach_role_policy(
+    RoleName=role_name,
+    PolicyArn=policy_arn
+)
+role_arn = response['Role']['Arn']
+```
+
 
 ### Agentic Gateway의 Tool 배포
 
-Lambda 폴더의 code들을 배포하기 위해 아래와 같이 먼저 압축을 합니다. 이후 아래와 같이 기 생성한 lambda role과 zip 파일의 코드를 이용해 lambda를 생성합니다. 
+#### Gateway에 Tool을 배포하기
+
+[create_gateway_tool.py](./gateway/kb-retriever/create_gateway_tool.py)를 이용해 MCP server인 target을 AgentCore Gateway에 배포할 수 있습니다.
+
+```python
+python create_gateway_tool.py
+```
+
+Gateway에 배포를 위해서는 bearer token이 필요합니다. 이 token은 먼저 secret에 이미 저장된 값을 먼저 쓰고, 403같은 에러가 발생하면 Cognito를 접속해서 업데이트 합니다. 여기서는 편의상 secret_name으로 아래와 같이 project 이름을 이용하므로, gatway의 모든 target은 같은 secret을 이용합니다. 
+
+```python
+secret_name = f'{projectName.lower()}/credentials'
+
+session = boto3.Session()
+client = session.client('secretsmanager', region_name=region)
+response = client.get_secret_value(SecretId=secret_name)
+bearer_token_raw = response['SecretString']        
+token_data = json.loads(bearer_token_raw)  
+bearer_token = token_data['bearer_token']
+```
+
+인증에 필요한 client_id는 생성할때 config.json에 저장하거나 아래와 같이 client_name을 이용해 검색해서 사용할 수 있습니다. 
+
+```python
+gateway_client = boto3.client('bedrock-agentcore-control', region_name=region)
+if not client_id:
+    response = cognito_client.list_user_pool_clients(UserPoolId=user_pool_id)
+    for client in response['UserPoolClients']:
+        if client['ClientName'] == client_name:
+            client_id = client['ClientId']
+            cognito_config['client_id'] = client_id     
+            break
+```
+
+AgentGateway의 생성을 위해 미리 생성한 client, role을 활용합니다. 
+
+```python
+client_id = cognito_config.get('client_id')
+agentcore_gateway_iam_role = config['agentcore_gateway_iam_role']
+auth_config = {
+    "customJWTAuthorizer": { 
+        "allowedClients": [client_id],  
+        "discoveryUrl": cognito_discovery_url
+    }
+}
+response = gateway_client.create_gateway(
+    name=gateway_name,
+    roleArn = agentcore_gateway_iam_role,
+    protocolType='MCP',
+    authorizerType='CUSTOM_JWT',
+    authorizerConfiguration=auth_config, 
+    description=f'AgentCore Gateway for {projectName}'
+)
+gateway_id = response["gatewayId"]
+gateway_url = response["gatewayUrl"]
+```
+
+AgentCore Gateway에 접속하기 위한 경로는 아래와 같이 Gateway의 ID와 region 정보를 이용해 얻을 수도 있습니다. 
+
+```python
+gateway_url = f'https://{gateway_id}.gateway.bedrock-agentcore.{region}.amazonaws.com/mcp'
+```
+
+#### Lambda의 생성
+
+Gateway에서 MCP 서버의 동작은 lambda를 활용합니다. Lambda를 배포하기 위하여 아래와 같이 Lambda 폴더의 code들을 압축을 합니다. 이후 아래와 같이 기생성한 lambda role과 zip 파일의 코드를 이용해 lambda를 생성합니다. 
 
 ```python
 os.makedirs(lambda_function_path)
@@ -345,8 +449,11 @@ def retrieve(query: str) -> str:
     return json.dumps(json_docs, ensure_ascii=False)
 ```
 
+### Tool Spec
 
-#### Tool Spec: use-aws
+Agent가 Gateway에 tool에 대한 정보를 요청하면 tool spec의 값을 아래와 같이 리턴합니다. 
+
+#### use-aws의 설정
 
 AWS CLI를 이용해 AWS 인프라를 생성 및 관리하는 tool인 use-aws를 위해 아래와 같이 Tool Spec을 정의할 수 있습니다.
 
@@ -393,7 +500,7 @@ AWS CLI를 이용해 AWS 인프라를 생성 및 관리하는 tool인 use-aws를
 }
 ```
 
-#### Tool Spec: kb-retirever
+#### kb-retirever의 설정
 
 kb-retirever는 Knowledge Base를 이용하여 검색을 수행합니다. 따라서 아래와 같이 검색어를 위한 string 형태의 keyword가 필요합니다. Tool 선택에 필요한 조건은 description에 기술합니다. 
 
@@ -415,9 +522,45 @@ kb-retirever는 Knowledge Base를 이용하여 검색을 수행합니다. 따라
 }
 ```
 
+### Target의 생성
+
+아래와 같이 "tool_spec.json"을 읽어서 toolSchema를 정의합니다. 
+
+```python
+TOOL_SPEC = json.load(open(os.path.join(script_dir, "tool_spec.json")))     
+lambda_target_config = {
+    "mcp": {
+        "lambda": {
+            "lambdaArn": lambda_function_arn, 
+            "toolSchema": {
+                "inlinePayload": [TOOL_SPEC]
+            }
+        }
+    }
+}
+```
+
+이후 아래와 같이 target을 생성합니다.
+
+```python
+credential_config = [ 
+    {
+        "credentialProviderType" : "GATEWAY_IAM_ROLE"
+    }
+]
+response = gateway_client.create_gateway_target(
+    gatewayIdentifier=gateway_id,
+    name=targetname,
+    description=f'{targetname} for {projectName}',
+    targetConfiguration=lambda_target_config,
+    credentialProviderConfigurations=credential_config)
+target_id = response["targetId"]
+```
+
+
 ### 배포 방법
 
-AgentCore의 Gateway를 이용하면 Lambda를 이용해 MCP 서버를 구현할 수 있습니다. 여기에서는 Role 및 Tool을 배포하는 2가지의 python 파일을 이용하여 Runtime Gateway에 배포를 수행합니다. [create_gateway_role.py](./gateway/kb-retriever/create_gateway_role.py)와 같이 gateway를 위한 IAM role을 생성합니다. 
+여기에서는 Role 및 Tool을 배포하는 2가지의 python 파일을 이용하여 Runtime Gateway에 배포를 수행합니다. [create_gateway_role.py](./gateway/kb-retriever/create_gateway_role.py)와 같이 gateway를 위한 IAM role을 생성합니다. 
 
 ```text
 python create_gateway_role.py
@@ -429,16 +572,17 @@ python create_gateway_role.py
 python create_gateway_tool.py
 ```
 
-아래와 같이 [create_gateway_tool.py](./gateway/kb-retriever/test_mcp_remote.py)을 이용해 MCP 서버에 대한 동작을 테스트 할 수 있습니다.
+이때, use-aws와 같은 tool은 [lambda folder](./gateway/use-aws/lambda-use-aws-for-mcp)에 use-aws를 위한 colorama, rich, typing_extensions를 설치하여야 합니다. 이와 같은 패키지들은 아래와 같은 방법으로 folder에 설치합니다.
+
+```text
+pip install rich --target ./lambda-kb-retriever-for-mcp
+```
+
+이제 아래와 같이 [create_gateway_tool.py](./gateway/kb-retriever/test_mcp_remote.py)을 이용해 MCP 서버에 대한 동작을 테스트 할 수 있습니다.
 
 ```text
 python test_mcp_remote.py
 ```
-
-
-### use-aws 관련 패키지 설치
-
-[lambda folder](./gateway/use-aws/lambda-use-aws-for-mcp)에 use-aws를 위한 colorama, rich, typing_extensions를 설치하여야 합니다.
 
 
 ## 실행 결과
