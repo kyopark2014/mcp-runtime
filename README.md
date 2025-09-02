@@ -85,7 +85,9 @@ for result in retrieval_results:
     })
 ```
 
-## AgentCore의 Runtime으로 Streamable HTTP 방식의 MCP Tool 배포
+## AgentCore Runtime
+
+AgentCore Runtime을 이용하면, container로 동작하는 Streamable HTTP 방식의 MCP 서버를 생성하여 활용할 수 있습니다.
 
 ### Runtime 배포 준비
 
@@ -247,9 +249,9 @@ python test_mcp_local.py
 
 
 
-## AgentCore의 Gateway를 이용하여 Streamable HTTP 방식의 MCP Tool 배포
+## AgentCore Gateway
 
-AgentCore의 Gateway를 이용하면 Lambda를 이용해 MCP 서버를 구현할 수 있습니다. 
+AgentCore의 Gateway를 이용하면 Lambda로 Streamable HTTP 방식의 MCP 서버를 만들어 편리하게 이용할 수 있습니다. 
 
 ### Agentic Gateway의 Role 생성
 
