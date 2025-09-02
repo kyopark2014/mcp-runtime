@@ -328,7 +328,7 @@ if not client_id:
             break
 ```
 
-AgentCore Gateway의 생성을 위해 미리 생성한 client_id, role을 활용합니다. 
+AgentCore Gateway의 생성을 위해 미리 생성한 client_id, role을 활용합니다. 생성후에 Gateway ID와 URL은 config.json에 저장해 활용합니다.
 
 ```python
 client_id = cognito_config.get('client_id')
