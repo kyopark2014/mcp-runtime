@@ -45,26 +45,6 @@ print(f"imageTags: {imageTags}")
 
 client = boto3.client('bedrock-agentcore-control', region_name=aws_region)
 
-def update_agentcore_json(agentRuntimeArn):
-    fname = 'config.json'        
-    try:
-        with open(fname, 'r') as f:
-            config = json.load(f)        
-        config['agent_runtime_arn'] = agentRuntimeArn            
-        with open(fname, 'w', encoding='utf-8') as f:
-            json.dump(config, f, ensure_ascii=False, indent=4)
-        print(f"{fname} updated")
-    except Exception as e:
-        print(f"[ERROR] {e}")
-        print(f"agentRuntimeArn is not found")        
-        config = {
-            'agent_runtime_arn': agentRuntimeArn
-        }
-        with open(fname, 'w', encoding='utf-8') as f:
-            json.dump(config, f, ensure_ascii=False, indent=4)
-        print(f"{fname} was created")
-        pass
-
 # Check for duplicate Agent Runtime name
 def create_agent_runtime(targetAgentRuntime):
     runtime_name = targetAgentRuntime
@@ -72,7 +52,7 @@ def create_agent_runtime(targetAgentRuntime):
     print(f"Trying to create agent: {runtime_name}")
 
     # create agent runtime
-    agentRuntimeArn = None
+    agentRuntimeArn = ""
     try:        
         response = client.create_agent_runtime(
             agentRuntimeName=runtime_name,
@@ -100,8 +80,8 @@ def create_agent_runtime(targetAgentRuntime):
 
     except client.exceptions.ConflictException as e:
         print(f"[ERROR] ConflictException: {e}")
-
-    update_agentcore_json(agentRuntimeArn)
+    
+    return agentRuntimeArn
 
 def update_agent_runtime(agentRuntimeId):
     response = client.update_agent_runtime(
@@ -128,7 +108,8 @@ def update_agent_runtime(agentRuntimeId):
 
     agentRuntimeArn = response['agentRuntimeArn']
     print(f"agentRuntimeArn: {agentRuntimeArn}")
-    update_agentcore_json(agentRuntimeArn)
+
+    return agentRuntimeArn
 
 def main():
     targetAgentRuntime = projectName.lower().replace('-', '_')+'_'+target.lower().replace('-', '_')
@@ -160,7 +141,9 @@ def main():
         print(f"create agent runtime: {targetAgentRuntime}, imageTags: {imageTags}")
         agentRuntimeArn = create_agent_runtime(targetAgentRuntime)
 
-    config['agent_runtime_arn'] = agentRuntimeArn           
+    if agentRuntimeArn:
+        print(f"updated agentRuntimeArn: {agentRuntimeArn}")    
+        config['agent_runtime_arn'] = agentRuntimeArn           
 
     # update config
     with open(config_path, 'w', encoding='utf-8') as f:

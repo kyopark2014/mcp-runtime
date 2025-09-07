@@ -152,6 +152,14 @@ def create_bedrock_agentcore_policy():
                     "ec2:*"
                 ],
                 "Resource": "*"
+            },
+            {
+                "Sid": "EKSAccess",
+                "Effect": "Allow",
+                "Action": [
+                    "eks:*"
+                ],
+                "Resource": "*"
             }
         ]
     }

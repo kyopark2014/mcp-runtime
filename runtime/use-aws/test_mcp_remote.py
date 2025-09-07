@@ -112,8 +112,8 @@ def save_bearer_token(secret_name, bearer_token):
         # Continue execution even if saving fails
 
 async def main():
-    agent_arn = config['agent_runtime_arn']
-    region = config['region']
+    agent_arn = config.get('agent_runtime_arn', "")
+    region = config.get('region', "")
     
     # Check basic AWS connectivity
     bearer_token = get_bearer_token()
@@ -275,10 +275,10 @@ async def main():
                     "label": "List S3 buckets"
                 }
                 
-                print("8. S3 list_buckets 호출 중...")
+                print("8. S3 list_buckets calling...")
                 try:
                     result = await asyncio.wait_for(session.call_tool("use_aws", s3_params), timeout=60)
-                    print(f"10. S3 list_buckets 성공!")
+                    print(f"10. S3 list_buckets successful!")
                     print(f"Result: {result}")
                     
                     if hasattr(result, 'content') and result.content:
@@ -286,9 +286,9 @@ async def main():
                             if hasattr(content, 'text'):
                                 print(f"Content: {content.text}")
                 except asyncio.TimeoutError:
-                    print("❌ S3 list_buckets 타임아웃 (60초)")
+                    print("S3 list_buckets timeout (60s)")
                 except Exception as s3_error:
-                    print(f"❌ S3 list_buckets 실패: {s3_error}")
+                    print(f"S3 list_buckets failed: {s3_error}")
                 
                 # Test AWS EC2 instance list retrieval
                 print("\n=== Testing AWS EC2 Describe Instances ===")
@@ -311,9 +311,9 @@ async def main():
                             if hasattr(content, 'text'):
                                 print(f"Content: {content.text}")
                 except asyncio.TimeoutError:
-                    print("❌ EC2 describe_instances 타임아웃 (60초)")
+                    print("EC2 describe_instances 타임아웃 (60초)")
                 except Exception as ec2_error:
-                    print(f"❌ EC2 describe_instances 실패: {ec2_error}")
+                    print(f"EC2 describe_instances 실패: {ec2_error}")
                 
                 print("\n=== MCP Connection Test Complete ===")
                                 
