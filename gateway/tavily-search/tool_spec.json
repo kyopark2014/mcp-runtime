@@ -1,0 +1,13 @@
+{
+    "name": "retrieve",
+    "description": "Performs a comprehensive web search using Tavily's AI-powered search engine. Excels at extracting and summarizing relevant content from web pages, making it ideal for research, fact-finding, and gathering detailed information.",
+    "inputSchema": {
+        "type": "object",
+        "properties": {
+            "query": {
+                "type": "Search query"
+            }
+        },
+        "required": ["keyword"]
+    }
+}
