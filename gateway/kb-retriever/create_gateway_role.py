@@ -22,8 +22,8 @@ def load_config():
 config = load_config()
 
 region = config.get('region')
-accountId = config.get('accountId')
-if accountId is None:
+accountId = config.get('accountId', "")
+if not accountId:
     session = boto3.Session()
     region = session.region_name
     
